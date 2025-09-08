@@ -20,8 +20,8 @@ export const authOptions: NextAuthOptions = {
     async session({ session, user }) {
       if (session?.user) {
         (session.user as any).id = user.id;
-        (session.user as any).credits = user.credits;
-        (session.user as any).isAdmin = user.isAdmin;
+        (session.user as any).credits = (user as any).credits;
+        (session.user as any).isAdmin = (user as any).isAdmin;
       }
       return session;
     },
