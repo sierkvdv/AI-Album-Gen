@@ -8,9 +8,9 @@ import { LedgerType } from '@prisma/client';
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!session?.user || !(session.user as any).id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const userId = session.user.id as string;
+  const userId = (session.user as any).id as string;
   const { prompt, styleId } = await req.json();
   if (!prompt || !styleId) return NextResponse.json({ error: 'Missing prompt or style' }, { status: 400 });
 

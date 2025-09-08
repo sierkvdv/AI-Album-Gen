@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid credit quantity' }, { status: 400 });
   }
   try {
-    const sessionId = await createCheckoutSession(session.user.id, numCredits);
+    const sessionId = await createCheckoutSession((session.user as any).id, numCredits);
     return NextResponse.json({ sessionId });
   } catch (error: any) {
     console.error('Stripe checkout error', error);
