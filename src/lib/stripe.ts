@@ -4,7 +4,7 @@ import Stripe from 'stripe';
 // Do not expose the secret key to the browser. All Stripe calls should
 // originate from the backend.
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2023-10-16',
+  apiVersion: '2022-11-15',
   typescript: true,
 });
 
