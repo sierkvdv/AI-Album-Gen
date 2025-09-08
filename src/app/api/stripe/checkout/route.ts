@@ -5,7 +5,7 @@ import { createCheckoutSession } from '@/lib/stripe';
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
+  if (!session?.user || !(session.user as any).id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   const { credits } = await req.json();
