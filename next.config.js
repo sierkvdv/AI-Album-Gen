@@ -2,8 +2,6 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
-
-  },
   images: {
     domains: ["images.unsplash.com", "cdn.openai.com", "files.stripe.com"],
   },
