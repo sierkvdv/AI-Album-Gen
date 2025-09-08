@@ -6,8 +6,12 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  /// Use a PostgreSQL database for production deployments.
+  /// DATABASE_URL should point to the transaction pooler connection string (Shared Pooler).
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  /// DIRECT_URL points to the direct connection and is required for Prisma migrations (db push).
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -70,7 +74,8 @@ model VerificationToken {
 model CreditLedger {
   id        String    @id @default(cuid())
   userId    String
-  type      String    // 'grant' | 'purchase' | 'use'
+  /// Type of credit ledger entry.
+  type      LedgerType
   amount    Int
   reference String?   // e.g. stripeSessionId or generationId
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -98,4 +103,14 @@ model Payment {
   currency        String   @default("usd")
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt       DateTime @default(now())
+}
+
+/// Enum representing the type of a credit ledger entry.
+enum LedgerType {
+  /// Credits added for free (e.g., initial signup bonus).
+  GRANT
+  /// Credits purchased via Stripe.
+  PURCHASE
+  /// Credits consumed when generating an image.
+  USE
 }
