@@ -10,7 +10,7 @@
     "prisma": "prisma",
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
-    "postinstall": "prisma generate && prisma db push"
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@prisma/client": "^5.12.1",
