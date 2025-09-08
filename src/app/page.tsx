@@ -1,36 +1,28 @@
-import Link from 'next/link';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+'use client';
 
-export default async function HomePage() {
-  const session = await getServerSession(authOptions);
+import { signIn } from 'next-auth/react';
+import Link from 'next/link';
+
+export default function Home() {
   return (
     <main className="flex flex-col items-center justify-center p-8 space-y-6">
       <h1 className="text-4xl font-bold text-center">AI Album Cover Generator</h1>
-      <p className="text-center max-w-prose">
-        Generate unique album covers with the power of artificial intelligence. Sign in to start
-        using your free credits, enter a prompt and choose a style preset to get started.
+      <p className="max-w-xl text-center text-gray-600">
+        Generate unique album covers with the power of AI. Sign in to use your free credits,
+        enter a prompt and choose a style preset.
       </p>
-      {session ? (
-        <>
-          <p>Welcome back, {session.user?.name ?? session.user?.email}!</p>
-          <Link
-            href="/dashboard"
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            Go to Dashboard
-          </Link>
-        </>
-      ) : (
-        <div className="flex space-x-4">
-          <Link
-            href="/api/auth/signin"
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            Sign in / Sign up
-          </Link>
-        </div>
-      )}
+
+      <button
+        onClick={() => signIn('google', { callbackUrl: '/dashboard' })}
+        className="px-5 py-3 rounded bg-blue-600 text-white hover:bg-blue-700"
+      >
+        Sign in with Google
+      </button>
+
+      {/* Fallback naar de ingebouwde NextAuth sign-in pagina */}
+      <div className="text-sm">
+        <Link href="/api/auth/signin" className="underline">Open sign-in page</Link>
+      </div>
     </main>
   );
 }

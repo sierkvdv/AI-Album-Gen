@@ -7,15 +7,21 @@ import { LedgerType } from '@prisma/client';
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
+  // Database sessions zijn prima; je hebt de tabellen al. Desgewenst kun je naar 'jwt' wisselen.
   session: { strategy: 'database', maxAge: 30 * 24 * 60 * 60 },
+
   providers: [
-    // Activeer e-mail alleen als je SMTP-variabelen hebt:
-    // ...(process.env.EMAIL_SERVER_HOST ? [EmailProvider({...})] : []),
+    // (Zet EmailProvider pas aan als je SMTP hebt)
     ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
-      ? [GoogleProvider({ clientId: process.env.GOOGLE_CLIENT_ID!, clientSecret: process.env.GOOGLE_CLIENT_SECRET! })]
+      ? [GoogleProvider({
+          clientId: process.env.GOOGLE_CLIENT_ID!,
+          clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+        })]
       : []),
   ],
+
   secret: process.env.NEXTAUTH_SECRET,
+
   callbacks: {
     async session({ session, user }) {
       if (session?.user) {
@@ -25,18 +31,23 @@ export const authOptions: NextAuthOptions = {
       }
       return session;
     },
+    // Zorgt dat iedere geslaagde login naar /dashboard gaat
+    async redirect({ url, baseUrl }) {
+      // Interne redirects blijven intern
+      if (url.startsWith('/')) return `${baseUrl}${url}`;
+      // Extern naar hetzelfde domein is oké
+      try { if (new URL(url).origin === baseUrl) return url; } catch {}
+      // Anders altijd naar dashboard
+      return `${baseUrl}/dashboard`;
+    },
   },
+
   events: {
     async createUser({ user }) {
       await prisma.$transaction(async (tx) => {
         await tx.user.update({ where: { id: user.id }, data: { credits: 5 } });
         await tx.creditLedger.create({
-          data: {
-            userId: user.id,
-            type: LedgerType.GRANT,
-            amount: 5,
-            reference: 'first_login_bonus',
-          },
+          data: { userId: user.id, type: LedgerType.GRANT, amount: 5, reference: 'first_login_bonus' },
         });
       });
     },
