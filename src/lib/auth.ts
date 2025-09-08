@@ -9,7 +9,7 @@ export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   session: { strategy: 'database', maxAge: 30 * 24 * 60 * 60 },
   providers: [
-    // Activeer e-mail alleen als je SMTP-gegevens hebt:
+    // Activeer e-mail alleen als je SMTP-variabelen hebt:
     // ...(process.env.EMAIL_SERVER_HOST ? [EmailProvider({...})] : []),
     ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
       ? [GoogleProvider({ clientId: process.env.GOOGLE_CLIENT_ID!, clientSecret: process.env.GOOGLE_CLIENT_SECRET! })]
@@ -41,5 +41,4 @@ export const authOptions: NextAuthOptions = {
       });
     },
   },
-  pages: { signIn: '/' },
 };
