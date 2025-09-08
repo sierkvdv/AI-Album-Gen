@@ -13,7 +13,7 @@ export default async function HomePage() {
       </p>
       {session ? (
         <>
-          <p>Welcome back, {session.user.name ?? session.user.email}!</p>
+          <p>Welcome back, {session.user?.name ?? session.user?.email}!</p>
           <Link
             href="/dashboard"
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"

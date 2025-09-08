@@ -100,7 +100,7 @@ export default function DashboardPage() {
       {session && (
         <div className="flex items-center justify-between">
           <p>
-            <strong>Credits:</strong> {session.user.credits}
+            <strong>Credits:</strong> {(session.user as any)?.credits}
           </p>
           <a
             href="/api/auth/signout"
