@@ -3,7 +3,7 @@ import GoogleProvider from 'next-auth/providers/google';
 // import EmailProvider from 'next-auth/providers/email';
 import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import { prisma } from './prisma';
-import { Prisma } from '@prisma/client';
+import { LedgerType } from '@prisma/client';
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
@@ -33,7 +33,7 @@ export const authOptions: NextAuthOptions = {
         await tx.creditLedger.create({
           data: {
             userId: user.id,
-            type: Prisma.LedgerType.GRANT,
+            type: LedgerType.GRANT,
             amount: 5,
             reference: 'first_login_bonus',
           },

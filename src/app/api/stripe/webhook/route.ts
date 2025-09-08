@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { prisma } from '@/lib/prisma';
-import { Prisma } from '@prisma/client';
+import { LedgerType } from '@prisma/client';
 
 export async function POST(req: NextRequest) {
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
         prisma.user.update({ where: { id: userId }, data: { credits: { increment: credits } } }),
         prisma.payment.create({ data: { userId, stripeSessionId, credits, amount: amountTotal, currency } }),
         prisma.creditLedger.create({
-          data: { userId, type: Prisma.LedgerType.PURCHASE, amount: credits, reference: stripeSessionId },
+          data: { userId, type: LedgerType.PURCHASE, amount: credits, reference: stripeSessionId },
         }),
       ]);
     }

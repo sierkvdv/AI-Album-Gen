@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { generateAlbumCover } from '@/lib/ai';
 import { stylePresets } from '@/lib/stylePresets';
-import { Prisma } from '@prisma/client';
+import { LedgerType } from '@prisma/client';
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
       await tx.creditLedger.create({
         data: {
           userId,
-          type: Prisma.LedgerType.USE,
+          type: LedgerType.USE,
           amount: 1,
           reference: gen.id,
         },

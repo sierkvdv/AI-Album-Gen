@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { Prisma } from '@prisma/client';
+import { LedgerType } from '@prisma/client';
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     await tx.creditLedger.create({
       data: {
         userId,
-        type: delta > 0 ? Prisma.LedgerType.GRANT : Prisma.LedgerType.USE,
+        type: delta > 0 ? LedgerType.GRANT : LedgerType.USE,
         amount: Math.abs(delta),
         reference: 'admin_adjust',
       },
