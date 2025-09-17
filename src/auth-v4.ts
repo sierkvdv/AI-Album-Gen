@@ -1,18 +1,7 @@
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 
-// Force override NEXTAUTH_URL to prevent localhost issues
-if (process.env.NODE_ENV === "production" && process.env.VERCEL) {
-  delete process.env.NEXTAUTH_URL;
-}
-
-export const {
-  handlers,
-  auth,
-  signIn,
-  signOut,
-} = NextAuth({
-  secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
+export const authOptions = {
   providers: [
     GoogleProvider({
       clientId: process.env.AUTH_GOOGLE_ID || process.env.GOOGLE_CLIENT_ID || "",
@@ -20,23 +9,27 @@ export const {
     }),
   ],
   session: {
-    strategy: "jwt",
+    strategy: "jwt" as const,
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user }: any) {
       if (user) {
         token.id = user.id;
       }
       return token;
     },
-    async session({ session, token }) {
+    async session({ session, token }: any) {
       if (session?.user && token) {
         (session.user as any).id = token.id;
       }
       return session;
     },
   },
-  trustHost: true,
+  pages: {
+    signIn: "/",
+    error: "/",
+  },
   debug: true,
-  // Force new deployment to clear Vercel cache
-});
+};
+
+export default NextAuth(authOptions);
