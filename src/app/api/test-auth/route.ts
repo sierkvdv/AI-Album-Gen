@@ -16,9 +16,9 @@ export async function GET() {
         }
       } : null,
       authConfig: {
-        hasGoogleClientId: !!process.env.AUTH_GOOGLE_ID,
-        hasGoogleClientSecret: !!process.env.AUTH_GOOGLE_SECRET,
-        hasAuthSecret: !!process.env.AUTH_SECRET,
+        hasGoogleClientId: !!(process.env.AUTH_GOOGLE_ID || process.env.GOOGLE_CLIENT_ID),
+        hasGoogleClientSecret: !!(process.env.AUTH_GOOGLE_SECRET || process.env.GOOGLE_CLIENT_SECRET),
+        hasAuthSecret: !!(process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET),
         hasTrustHost: !!process.env.AUTH_TRUST_HOST
       }
     });

@@ -38,10 +38,15 @@ import { LedgerType } from "@prisma/client";
  *  - TEST_PASSWORD: Password accepted by the credentials provider in dev/tests.
  */
 
+// Environment variable fallbacks for backward compatibility
+const AUTH_SECRET = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET;
+const AUTH_GOOGLE_ID = process.env.AUTH_GOOGLE_ID || process.env.GOOGLE_CLIENT_ID;
+const AUTH_GOOGLE_SECRET = process.env.AUTH_GOOGLE_SECRET || process.env.GOOGLE_CLIENT_SECRET;
+
 const providers: any[] = [
   GoogleProvider({
-    clientId: process.env.AUTH_GOOGLE_ID!,
-    clientSecret: process.env.AUTH_GOOGLE_SECRET!,
+    clientId: AUTH_GOOGLE_ID!,
+    clientSecret: AUTH_GOOGLE_SECRET!,
   }),
 ];
 
@@ -81,7 +86,7 @@ export const {
   signOut,
 } = NextAuth({
   adapter: PrismaAdapter(prisma),
-  secret: process.env.AUTH_SECRET,
+  secret: AUTH_SECRET,
   session: {
     strategy: "jwt",
     maxAge: 7 * 24 * 60 * 60,
