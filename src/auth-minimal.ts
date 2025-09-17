@@ -35,9 +35,7 @@ export const {
   session: {
     strategy: "jwt",
   },
-  pages: {
-    signIn: "/",
-    error: "/",
-  },
+  // Remove pages config to use defaults
   debug: true, // Always enable debug for troubleshooting
+  trustHost: true, // Trust the host header for Vercel
 });
