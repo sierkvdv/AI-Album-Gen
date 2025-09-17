@@ -1,35 +1,9 @@
 'use client';
 
-import { signIn, useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { signIn } from 'next-auth/react';
+import Link from 'next/link';
 
 export default function Home() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (session) {
-      router.push('/dashboard');
-    }
-  }, [session, router]);
-
-  if (status === 'loading') {
-    return (
-      <main className="flex flex-col items-center justify-center p-8 space-y-6">
-        <div className="text-lg">Loading...</div>
-      </main>
-    );
-  }
-
-  if (session) {
-    return (
-      <main className="flex flex-col items-center justify-center p-8 space-y-6">
-        <div className="text-lg">Redirecting to dashboard...</div>
-      </main>
-    );
-  }
-
   return (
     <main className="flex flex-col items-center justify-center p-8 space-y-6">
       <h1 className="text-4xl font-bold text-center">AI Album Cover Generator</h1>
@@ -40,10 +14,15 @@ export default function Home() {
 
       <button
         onClick={() => signIn('google', { callbackUrl: '/dashboard' })}
-        className="px-6 py-3 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors font-medium"
+        className="px-5 py-3 rounded bg-blue-600 text-white hover:bg-blue-700"
       >
         Sign in with Google
       </button>
+
+      {/* Fallback naar de ingebouwde NextAuth sign-in pagina */}
+      <div className="text-sm">
+        <Link href="/api/auth/signin" className="underline">Open sign-in page</Link>
+      </div>
     </main>
   );
 }
