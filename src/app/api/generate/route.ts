@@ -24,8 +24,15 @@ export async function POST(req: NextRequest) {
   if (!user || user.credits <= 0) return NextResponse.json({ error: 'Insufficient credits' }, { status: 403 });
 
   try {
+    console.log('Starting image generation for user:', userId);
+    console.log('Prompt:', prompt);
+    console.log('Style preset:', preset);
+    
     const styleDescriptor = `${preset.genre}, ${preset.mood}, ${preset.colour}`;
+    console.log('Style descriptor:', styleDescriptor);
+    
     const imageUrl = await generateAlbumCover(prompt, styleDescriptor);
+    console.log('Generated image URL:', imageUrl);
 
     const generation = await prisma.$transaction(async (tx) => {
       const gen = await tx.generation.create({
@@ -43,9 +50,17 @@ export async function POST(req: NextRequest) {
       return gen;
     });
 
+    console.log('Generation saved successfully:', generation.id);
     return NextResponse.json({ generation });
   } catch (err) {
-    console.error('Generate error', err);
-    return NextResponse.json({ error: 'Failed to generate image' }, { status: 500 });
+    console.error('Generate error details:', {
+      error: err,
+      message: err instanceof Error ? err.message : 'Unknown error',
+      stack: err instanceof Error ? err.stack : undefined
+    });
+    return NextResponse.json({ 
+      error: 'Failed to generate image', 
+      details: err instanceof Error ? err.message : 'Unknown error'
+    }, { status: 500 });
   }
 }
