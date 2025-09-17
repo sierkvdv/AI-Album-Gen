@@ -182,9 +182,13 @@ export default function DashboardPage() {
             {generations.map((gen) => (
               <div key={gen.id} className="bg-white p-2 rounded shadow">
                 <img
-                  src={gen.imageUrl}
+                  src={`/api/image/${gen.id}`}
                   alt={gen.prompt}
                   className="w-full h-auto rounded"
+                  onError={(e) => {
+                    // Fallback to original URL if proxy fails
+                    (e.target as HTMLImageElement).src = gen.imageUrl;
+                  }}
                 />
                 <div className="mt-2 text-sm">
                   <p className="font-medium">{gen.prompt}</p>
@@ -193,9 +197,14 @@ export default function DashboardPage() {
                     {new Date(gen.createdAt).toLocaleString()}
                   </p>
                   <a
-                    href={gen.imageUrl}
-                    download
+                    href={`/api/image/${gen.id}`}
+                    download={`album-cover-${gen.id}.png`}
                     className="text-blue-600 hover:underline text-xs mt-1 inline-block"
+                    onClick={(e) => {
+                      // If proxy fails, try original URL
+                      e.preventDefault();
+                      window.open(`/api/image/${gen.id}`, '_blank');
+                    }}
                   >
                     Download
                   </a>
