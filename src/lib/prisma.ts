@@ -1,21 +1,32 @@
 import { PrismaClient } from "@prisma/client";
 
 /**
- * Singleton Prisma client.
- *
- * Next.js hot reloads modules on file changes, which can result in multiple
- * instances of PrismaClient being created in development.  To avoid
- * exhausting database connections, we store the client on the global
- * namespace.  In production (single instance) we simply instantiate a new
- * client.
+ * Singleton Prisma client for serverless environments.
+ * 
+ * This ensures we don't create multiple connections in serverless deployments
+ * like Vercel, which can cause "prepared statement already exists" errors.
  */
 declare global {
   // eslint-disable-next-line no-var
-  var prisma: PrismaClient | undefined;
+  var __prisma: PrismaClient | undefined;
 }
 
-export const prisma: PrismaClient = globalThis.prisma ?? new PrismaClient();
+// Create a new PrismaClient instance
+const createPrismaClient = () => {
+  return new PrismaClient({
+    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+    datasources: {
+      db: {
+        url: process.env.DATABASE_URL,
+      },
+    },
+  });
+};
 
-if (process.env.NODE_ENV !== "production") {
-  globalThis.prisma = prisma;
+// Use global variable in development to prevent hot reload issues
+// In production, always create a new instance for serverless
+export const prisma = globalThis.__prisma ?? createPrismaClient();
+
+if (process.env.NODE_ENV === "development") {
+  globalThis.__prisma = prisma;
 }

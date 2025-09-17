@@ -10,6 +10,9 @@ export async function GET(req: NextRequest) {
   }
   
   try {
+    // Test database connection first
+    await prisma.$connect();
+    
     // Get user by email
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
@@ -21,10 +24,17 @@ export async function GET(req: NextRequest) {
     });
     
     if (!user) {
+      // Try to find all users to see if database is working
+      const allUsers = await prisma.user.findMany({
+        select: { id: true, email: true, name: true }
+      });
+      
       return NextResponse.json({ 
         error: 'User not found in database',
         sessionUser: session.user,
-        email: session.user.email 
+        email: session.user.email,
+        allUsers: allUsers,
+        totalUsers: allUsers.length
       }, { status: 404 });
     }
     
@@ -32,14 +42,24 @@ export async function GET(req: NextRequest) {
       user,
       sessionUser: session.user,
       totalGenerations: user.generations.length,
-      generations: user.generations
+      generations: user.generations,
+      databaseConnected: true
     });
   } catch (error) {
     console.error('Debug error:', error);
-    return NextResponse.json({ 
+    
+    // Try to get more info about the error
+    let errorDetails = {
       error: 'Database error',
       message: error instanceof Error ? error.message : 'Unknown error',
-      sessionUser: session.user
-    }, { status: 500 });
+      sessionUser: session.user,
+      databaseUrl: process.env.DATABASE_URL ? 'Set' : 'Not set',
+      nodeEnv: process.env.NODE_ENV
+    };
+    
+    return NextResponse.json(errorDetails, { status: 500 });
+  } finally {
+    // Always disconnect
+    await prisma.$disconnect();
   }
 }
