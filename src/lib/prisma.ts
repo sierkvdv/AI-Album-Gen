@@ -12,13 +12,19 @@ declare global {
  * In production (serverless), we create fresh instances for each request.
  */
 export function createPrismaClient() {
+  // Modify DATABASE_URL to disable prepared statements for serverless
+  const databaseUrl = process.env.DATABASE_URL;
+  const modifiedUrl = databaseUrl?.includes('?') 
+    ? `${databaseUrl}&pgbouncer=true&connection_limit=1`
+    : `${databaseUrl}?pgbouncer=true&connection_limit=1`;
+
   // In production (serverless), always create a new instance
   if (process.env.NODE_ENV === 'production') {
     return new PrismaClient({
       log: ['error'],
       datasources: {
         db: {
-          url: process.env.DATABASE_URL,
+          url: modifiedUrl,
         },
       },
     });
@@ -30,7 +36,7 @@ export function createPrismaClient() {
       log: ['error'],
       datasources: {
         db: {
-          url: process.env.DATABASE_URL,
+          url: modifiedUrl,
         },
       },
     });
