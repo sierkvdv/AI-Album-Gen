@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { stylePresets } from '@/lib/stylePresets';
 import { loadStripe } from '@stripe/stripe-js';
@@ -102,12 +102,12 @@ export default function DashboardPage() {
           <p>
             <strong>Credits:</strong> {(session.user as any)?.credits}
           </p>
-          <a
-            href="/api/auth/signout"
+          <button
+            onClick={() => signOut({ callbackUrl: "/" })}
             className="text-sm text-red-600 hover:underline"
           >
             Sign out
-          </a>
+          </button>
         </div>
       )}
 

@@ -1,7 +1,7 @@
 /* eslint-disable react/react-in-jsx-scope */
 "use client";
 
-import { useSession, signIn } from "next-auth/react";
+import { useSession, signIn, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
@@ -26,8 +26,12 @@ export default function Home() {
   }, [session, router]);
 
   const handleSignIn = async () => {
-    // Direct redirect to Google OAuth
-    window.location.href = "/api/auth/signin/google";
+    // Force account selection by adding prompt=select_account
+    window.location.href = "/api/auth/signin/google?prompt=select_account";
+  };
+
+  const handleSignOut = async () => {
+    await signOut({ callbackUrl: "/" });
   };
 
   // While the session is loading we can show a minimal spinner/message.
@@ -39,11 +43,44 @@ export default function Home() {
     );
   }
 
-  // If the user is authenticated, avoid showing the sign‑in UI.
+  // If the user is authenticated, show account info and logout option.
   if (session) {
     return (
-      <main className="flex h-screen items-center justify-center">
-        <p>Redirecting to dashboard...</p>
+      <main className="flex flex-col items-center justify-center gap-6 p-6">
+        <h1 className="text-3xl font-bold">Welcome back!</h1>
+        <div className="text-center">
+          <p className="text-lg">Signed in as:</p>
+          <p className="font-semibold text-blue-600">{session.user?.email}</p>
+          <p className="text-sm text-gray-600">{session.user?.name}</p>
+        </div>
+        <div className="flex gap-4">
+          <button
+            type="button"
+            onClick={() => router.push("/dashboard")}
+            className="rounded bg-green-600 px-4 py-2 font-semibold text-white hover:bg-green-700 focus:outline-none"
+          >
+            Go to Dashboard
+          </button>
+          <button
+            type="button"
+            onClick={handleSignOut}
+            className="rounded bg-gray-600 px-4 py-2 font-semibold text-white hover:bg-gray-700 focus:outline-none"
+          >
+            Sign Out
+          </button>
+        </div>
+        <div className="text-center">
+          <p className="text-sm text-gray-500">
+            Want to use a different account?
+          </p>
+          <button
+            type="button"
+            onClick={handleSignIn}
+            className="text-sm text-blue-600 hover:underline"
+          >
+            Sign in with different Google account
+          </button>
+        </div>
       </main>
     );
   }
