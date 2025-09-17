@@ -20,10 +20,18 @@ export default function Home() {
     setIsLoading(true);
     
     try {
-      await signIn('google', { 
+      const result = await signIn('google', { 
         callbackUrl: '/dashboard',
-        redirect: true
+        redirect: false
       });
+      
+      if (result?.error) {
+        console.error('Sign in error:', result.error);
+        setIsLoading(false);
+      } else if (result?.ok) {
+        // Force page reload to ensure clean session state
+        window.location.href = '/dashboard';
+      }
     } catch (error) {
       console.error('Sign in error:', error);
       setIsLoading(false);

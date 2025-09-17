@@ -7,12 +7,17 @@ import { LedgerType } from '@prisma/client';
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
-  session: { strategy: 'database', maxAge: 30 * 24 * 60 * 60 },
+  session: { 
+    strategy: 'database', 
+    maxAge: 30 * 24 * 60 * 60,
+    updateAge: 24 * 60 * 60 // Update session every 24 hours
+  },
   pages: {
     signIn: '/',
     error: '/',
   },
   debug: process.env.NODE_ENV === 'development',
+  useSecureCookies: process.env.NODE_ENV === 'production',
 
   providers: [
     GoogleProvider({

@@ -1,6 +1,7 @@
 import './globals.css';
 import { Inter } from 'next/font/google';
 import Providers from '@/components/Providers';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ReactNode } from 'react';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -15,7 +16,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body className={inter.className + ' bg-gray-50 text-gray-900 min-h-screen'}>
-        <Providers>{children}</Providers>
+        <ErrorBoundary>
+          <Providers>{children}</Providers>
+        </ErrorBoundary>
       </body>
     </html>
   );

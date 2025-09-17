@@ -14,7 +14,7 @@ const nextConfig = {
               "img-src 'self' blob: data: https://lh3.googleusercontent.com https://oaidalleapiprodscus.blob.core.windows.net",
               "connect-src 'self' https://api.openai.com https://accounts.google.com",
               "font-src 'self'",
-              "frame-src 'self' https://accounts.google.com"
+              "frame-src 'self' https://accounts.google.com https://js.stripe.com https://m.stripe.network https://is.stripe.com"
             ].join('; ')
           }
         ]
