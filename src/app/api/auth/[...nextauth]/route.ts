@@ -7,7 +7,7 @@ if (process.env.NODE_ENV === "production" && process.env.VERCEL) {
   process.env.NEXTAUTH_URL = "https://ai-album-gen.vercel.app";
 }
 
-export const {
+const {
   handlers,
   auth,
   signIn,
