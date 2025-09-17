@@ -38,5 +38,10 @@ export const {
   },
   trustHost: true,
   debug: true,
+  // Add pages configuration to fix server configuration error
+  pages: {
+    signIn: "/",
+    error: "/",
+  },
   // Force new deployment to clear Vercel cache
 });
