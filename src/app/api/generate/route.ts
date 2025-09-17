@@ -34,7 +34,8 @@ export async function POST(request: Request) {
 
   // Check if the user has enough credits.
   const userId = session.user.id;
-  const user = await prisma.user.findUnique({
+  const db = prisma();
+  const user = await db.user.findUnique({
     where: { id: userId },
     select: { credits: true },
   });
@@ -47,7 +48,7 @@ export async function POST(request: Request) {
   const imageUrl = await generateAlbumCover(prompt, styleDescriptor);
 
   // Persist the generation and decrement the user's credits in a transaction.
-  await prisma.$transaction(async (tx) => {
+  await db.$transaction(async (tx) => {
     await tx.generation.create({
       data: {
         userId,

@@ -18,7 +18,10 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     return NextResponse.json({ error: 'Invalid amount' }, { status: 400 });
   }
 
-  const updatedUser = await prisma.$transaction(async (tx) => {
+  // Create fresh Prisma client for this request
+  const db = prisma();
+  
+  const updatedUser = await db.$transaction(async (tx) => {
     const user = await tx.user.update({
       where: { id: userId },
       data: { credits: { increment: delta } },

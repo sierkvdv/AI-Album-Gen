@@ -8,7 +8,8 @@ export async function GET(req: NextRequest) {
   if (!session || !session.user || !(session.user as any).isAdmin) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  const users = await prisma.user.findMany({
+  const db = prisma();
+  const users = await db.user.findMany({
     select: {
       id: true,
       name: true,
