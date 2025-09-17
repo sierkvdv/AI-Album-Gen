@@ -20,18 +20,11 @@ export default function Home() {
     setIsLoading(true);
     
     try {
-      const result = await signIn('google', { 
+      // Use direct redirect to avoid race conditions
+      await signIn('google', { 
         callbackUrl: '/dashboard',
-        redirect: false
+        redirect: true
       });
-      
-      if (result?.error) {
-        console.error('Sign in error:', result.error);
-        setIsLoading(false);
-      } else if (result?.ok) {
-        // Force page reload to ensure clean session state
-        window.location.href = '/dashboard';
-      }
     } catch (error) {
       console.error('Sign in error:', error);
       setIsLoading(false);

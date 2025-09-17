@@ -9,7 +9,7 @@ export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   session: { 
     strategy: 'database', 
-    maxAge: 30 * 24 * 60 * 60,
+    maxAge: 7 * 24 * 60 * 60, // 7 days
     updateAge: 24 * 60 * 60 // Update session every 24 hours
   },
   pages: {
