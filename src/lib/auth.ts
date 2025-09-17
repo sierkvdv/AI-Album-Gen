@@ -7,8 +7,11 @@ import { LedgerType } from '@prisma/client';
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
-  // Database sessions zijn prima; je hebt de tabellen al. Desgewenst kun je naar 'jwt' wisselen.
   session: { strategy: 'database', maxAge: 30 * 24 * 60 * 60 },
+  pages: {
+    signIn: '/',
+    error: '/',
+  },
 
   providers: [
     GoogleProvider({
