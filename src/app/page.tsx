@@ -15,6 +15,10 @@ export default function Home() {
   }, [session, router]);
 
   const handleSignIn = () => {
+    console.log('Login button clicked');
+    console.log('Current URL:', window.location.href);
+    console.log('Redirecting to:', '/api/auth/signin/google?callbackUrl=/dashboard');
+    
     // Direct redirect to NextAuth Google signin - most reliable method
     window.location.href = '/api/auth/signin/google?callbackUrl=/dashboard';
   };
@@ -43,12 +47,24 @@ export default function Home() {
         enter a prompt and choose a style preset.
       </p>
 
-      <button
-        onClick={handleSignIn}
-        className="px-6 py-3 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors font-medium"
-      >
-        Sign in with Google
-      </button>
+      <div className="space-y-4">
+        <button
+          onClick={handleSignIn}
+          className="px-6 py-3 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors font-medium"
+        >
+          Sign in with Google
+        </button>
+        
+        <div className="text-sm text-gray-500">
+          <p>If the button doesn't work, try this direct link:</p>
+          <a 
+            href="/api/auth/signin/google?callbackUrl=/dashboard"
+            className="text-blue-600 hover:underline"
+          >
+            Direct Google Login Link
+          </a>
+        </div>
+      </div>
     </main>
   );
 }
