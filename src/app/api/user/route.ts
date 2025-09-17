@@ -4,12 +4,12 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from '@/lib/prisma';
 
 export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return NextResponse.json({ user: null }, { status: 401 });
-  }
-  
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      return NextResponse.json({ user: null }, { status: 401 });
+    }
+    
     // Find user in database by email
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
@@ -22,9 +22,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ user });
   } catch (error) {
     console.error('User API error:', error);
+    // Return a more detailed error for debugging
     return NextResponse.json({ 
       error: 'Database error',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      message: error instanceof Error ? error.message : 'Unknown error',
+      details: error instanceof Error ? error.stack : undefined
     }, { status: 500 });
   }
 }
