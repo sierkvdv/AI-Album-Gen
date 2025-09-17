@@ -198,19 +198,7 @@ export default function DashboardPage() {
                   <img
                     src={`/api/image/${gen.id}`}
                     alt={gen.prompt}
-                    className="w-full h-full object-cover transition-opacity duration-300"
-                    onError={(e) => {
-                      // Show placeholder if image fails to load
-                      const target = e.target as HTMLImageElement;
-                      target.src = '/placeholder_light_gray_block.png';
-                      target.alt = 'Image expired - placeholder shown';
-                      target.classList.add('opacity-50');
-                    }}
-                    onLoad={(e) => {
-                      // Remove placeholder styling if image loads successfully
-                      const target = e.target as HTMLImageElement;
-                      target.classList.remove('opacity-50');
-                    }}
+                    className="w-full h-full object-cover"
                   />
                 </div>
                 <div className="mt-2 text-sm">

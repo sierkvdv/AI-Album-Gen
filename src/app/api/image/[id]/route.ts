@@ -58,20 +58,23 @@ export async function GET(
         // If the URL is expired, serve a placeholder image immediately
         console.log('Image URL expired, serving placeholder:', generation.imageUrl);
         
-        // Serve placeholder directly without additional fetch
-        const placeholderResponse = await fetch(`${process.env.NEXTAUTH_URL || 'https://ai-album-gen.vercel.app'}/placeholder_light_gray_block.png`);
-        if (placeholderResponse.ok) {
-          const placeholderBuffer = await placeholderResponse.arrayBuffer();
-          const contentType = placeholderResponse.headers.get('content-type') || 'image/png';
-          
-          return new NextResponse(placeholderBuffer, {
-            headers: {
-              'Content-Type': contentType,
-              'Cache-Control': 'public, max-age=3600',
-              'X-Image-Status': 'expired-placeholder'
-            },
-          });
-        }
+        // Create a simple placeholder SVG image
+        const svgPlaceholder = `
+          <svg width="400" height="400" xmlns="http://www.w3.org/2000/svg">
+            <rect width="100%" height="100%" fill="#f3f4f6"/>
+            <text x="50%" y="45%" text-anchor="middle" fill="#6b7280" font-family="Arial, sans-serif" font-size="16">📷</text>
+            <text x="50%" y="55%" text-anchor="middle" fill="#6b7280" font-family="Arial, sans-serif" font-size="14">Image expired</text>
+            <text x="50%" y="65%" text-anchor="middle" fill="#9ca3af" font-family="Arial, sans-serif" font-size="12">Use Regenerate button</text>
+          </svg>
+        `;
+        
+        return new NextResponse(svgPlaceholder, {
+          headers: {
+            'Content-Type': 'image/svg+xml',
+            'Cache-Control': 'public, max-age=3600',
+            'X-Image-Status': 'expired-placeholder'
+          },
+        });
       }
       
       // Get the image data
