@@ -4,6 +4,8 @@ import GoogleProvider from "next-auth/providers/google";
 // Force override NEXTAUTH_URL to prevent localhost issues
 if (process.env.NODE_ENV === "production" && process.env.VERCEL) {
   delete process.env.NEXTAUTH_URL;
+  // Force the correct production URL
+  process.env.NEXTAUTH_URL = "https://ai-album-gen.vercel.app";
 }
 
 export const {
