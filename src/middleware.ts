@@ -3,6 +3,11 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function middleware(req: NextRequest) {
+  // Skip middleware for auth routes to prevent interference
+  if (req.nextUrl.pathname.startsWith('/api/auth/')) {
+    return NextResponse.next();
+  }
+
   // Alleen redirecten in productie, niet in development
   if (process.env.NODE_ENV === 'production') {
     const host = req.headers.get('host') || '';
@@ -20,6 +25,8 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  // Alleen auth-routes matchen, en alleen in productie
-  matcher: ['/api/auth/:path*'],
+  // Match all routes except auth routes
+  matcher: [
+    '/((?!api/auth|_next/static|_next/image|favicon.ico).*)',
+  ],
 };
