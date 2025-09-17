@@ -17,8 +17,23 @@ export const authOptions = {
       clientSecret: process.env.AUTH_GOOGLE_SECRET || "",
     }),
   ],
+  session: {
+    strategy: "jwt",
+  },
   debug: true,
   callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (session?.user && token) {
+        (session.user as any).id = token.id;
+      }
+      return session;
+    },
     async redirect({ url, baseUrl }) {
       if (url.startsWith("/")) return `${baseUrl}${url}`;
       else if (new URL(url).origin === baseUrl) return url;
