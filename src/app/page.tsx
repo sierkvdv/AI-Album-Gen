@@ -63,13 +63,25 @@ export default function Home() {
         enter a prompt and choose a style preset.
       </p>
 
-      <button
-        onClick={handleSignIn}
-        disabled={isLoading}
-        className="px-8 py-4 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-400 transition-colors font-medium text-lg"
-      >
-        {isLoading ? 'Signing in...' : 'Sign in with Google'}
-      </button>
+      <div className="space-y-4">
+        <button
+          onClick={handleSignIn}
+          disabled={isLoading}
+          className="px-8 py-4 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-400 transition-colors font-medium text-lg"
+        >
+          {isLoading ? 'Signing in...' : 'Sign in with Google'}
+        </button>
+        
+        <div className="text-sm text-gray-500 space-y-2">
+          <p>If the button doesn't work, try this direct link:</p>
+          <a 
+            href="/api/auth/signin/google?callbackUrl=/dashboard"
+            className="text-blue-600 hover:underline block"
+          >
+            Direct Google Login Link
+          </a>
+        </div>
+      </div>
     </main>
   );
 }

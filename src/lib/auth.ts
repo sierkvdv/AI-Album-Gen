@@ -11,10 +11,6 @@ export const authOptions: NextAuthOptions = {
     strategy: 'jwt', 
     maxAge: 7 * 24 * 60 * 60, // 7 days
   },
-  pages: {
-    signIn: '/',
-    error: '/',
-  },
   debug: true, // Always debug for now
   useSecureCookies: process.env.NODE_ENV === 'production',
 
