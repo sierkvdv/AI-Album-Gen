@@ -37,6 +37,17 @@ export const {
       }
       return session;
     },
+    async redirect({ url, baseUrl }) {
+      // Force the correct production URL
+      if (process.env.NODE_ENV === "production") {
+        if (url.startsWith("/")) return `https://ai-album-gen.vercel.app${url}`;
+        if (url.includes("ai-album-gen.vercel.app")) return url;
+        return "https://ai-album-gen.vercel.app/dashboard";
+      }
+      // For development, use the original logic
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      return baseUrl;
+    },
   },
   trustHost: true,
   debug: true,
