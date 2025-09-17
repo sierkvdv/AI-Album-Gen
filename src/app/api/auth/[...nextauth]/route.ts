@@ -17,7 +17,6 @@ const authOptions = {
       clientSecret: process.env.AUTH_GOOGLE_SECRET || "",
     }),
   ],
-  trustHost: true,
   debug: true,
   callbacks: {
     async redirect({ url, baseUrl }) {
