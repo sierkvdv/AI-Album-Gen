@@ -41,7 +41,8 @@ export async function POST(request: Request) {
   }
 
   // Generate the image using the AI helper.  In dev, this returns a placeholder.
-  const imageUrl = await generateAlbumCover(prompt, preset.descriptor);
+  const styleDescriptor = `${preset.genre}, ${preset.mood}, ${preset.colour}`;
+  const imageUrl = await generateAlbumCover(prompt, styleDescriptor);
 
   // Persist the generation and decrement the user's credits in a transaction.
   await prisma.$transaction(async (tx) => {
@@ -49,7 +50,7 @@ export async function POST(request: Request) {
       data: {
         userId: session.user.id,
         prompt,
-        styleId,
+        style: preset.name,
         imageUrl,
       },
     });
