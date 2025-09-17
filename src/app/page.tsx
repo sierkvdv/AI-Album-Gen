@@ -1,13 +1,12 @@
 'use client';
 
-import { signIn, useSession } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 
 export default function Home() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (session) {
@@ -15,33 +14,9 @@ export default function Home() {
     }
   }, [session, router]);
 
-  const handleSignIn = async () => {
-    if (isLoading) return;
-    setIsLoading(true);
-    
-    try {
-      // Try multiple approaches to ensure login works
-      const result = await signIn('google', { 
-        callbackUrl: '/dashboard',
-        redirect: false
-      });
-      
-      if (result?.error) {
-        console.error('Sign in error:', result.error);
-        // Fallback: try with redirect
-        window.location.href = '/api/auth/signin/google?callbackUrl=/dashboard';
-      } else if (result?.ok) {
-        // Success: redirect manually
-        window.location.href = '/dashboard';
-      } else {
-        // No result: try direct redirect
-        window.location.href = '/api/auth/signin/google?callbackUrl=/dashboard';
-      }
-    } catch (error) {
-      console.error('Sign in error:', error);
-      // Fallback: direct redirect
-      window.location.href = '/api/auth/signin/google?callbackUrl=/dashboard';
-    }
+  const handleSignIn = () => {
+    // Direct redirect to NextAuth Google signin - most reliable method
+    window.location.href = '/api/auth/signin/google?callbackUrl=/dashboard';
   };
 
   if (status === 'loading') {
@@ -70,10 +45,9 @@ export default function Home() {
 
       <button
         onClick={handleSignIn}
-        disabled={isLoading}
-        className="px-6 py-3 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+        className="px-6 py-3 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors font-medium"
       >
-        {isLoading ? 'Signing in...' : 'Sign in with Google'}
+        Sign in with Google
       </button>
     </main>
   );
