@@ -6,8 +6,8 @@ import { prisma } from './prisma';
 import { LedgerType } from '@prisma/client';
 
 export const authOptions: NextAuthOptions = {
-  // Geen adapter voor JWT sessions - we gebruiken alleen de database voor user data
-  session: { strategy: 'jwt', maxAge: 30 * 24 * 60 * 60 },
+  adapter: PrismaAdapter(prisma),
+  session: { strategy: 'database', maxAge: 30 * 24 * 60 * 60 },
   pages: {
     signIn: '/',
     error: '/',
@@ -23,28 +23,13 @@ export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
 
   callbacks: {
-    async session({ session, token }) {
-      if (session?.user && token) {
-        (session.user as any).id = token.sub;
-        (session.user as any).credits = token.credits;
-        (session.user as any).isAdmin = token.isAdmin;
+    async session({ session, user }) {
+      if (session?.user) {
+        (session.user as any).id = user.id;
+        (session.user as any).credits = (user as any).credits;
+        (session.user as any).isAdmin = (user as any).isAdmin;
       }
       return session;
-    },
-    async jwt({ token, user, account }) {
-      if (user) {
-        token.sub = user.id;
-        // Haal user data op uit database bij eerste login
-        const dbUser = await prisma.user.findUnique({
-          where: { id: user.id },
-          select: { credits: true, isAdmin: true }
-        });
-        if (dbUser) {
-          token.credits = dbUser.credits;
-          token.isAdmin = dbUser.isAdmin;
-        }
-      }
-      return token;
     },
     // Zorgt dat iedere geslaagde login naar /dashboard gaat
     async redirect({ url, baseUrl }) {
@@ -58,28 +43,13 @@ export const authOptions: NextAuthOptions = {
   },
 
   events: {
-    async signIn({ user, account, profile }) {
-      // Controleer of user al bestaat, zo niet maak hem aan
-      const existingUser = await prisma.user.findUnique({
-        where: { id: user.id }
-      });
-      
-      if (!existingUser) {
-        await prisma.$transaction(async (tx) => {
-          await tx.user.create({
-            data: {
-              id: user.id,
-              name: user.name,
-              email: user.email,
-              image: user.image,
-              credits: 5,
-            }
-          });
-          await tx.creditLedger.create({
-            data: { userId: user.id, type: LedgerType.GRANT, amount: 5, reference: 'first_login_bonus' },
-          });
+    async createUser({ user }) {
+      await prisma.$transaction(async (tx) => {
+        await tx.user.update({ where: { id: user.id }, data: { credits: 5 } });
+        await tx.creditLedger.create({
+          data: { userId: user.id, type: LedgerType.GRANT, amount: 5, reference: 'first_login_bonus' },
         });
-      }
+      });
     },
   },
 };

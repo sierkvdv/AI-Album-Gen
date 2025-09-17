@@ -2,42 +2,17 @@
 
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 
 export default function Home() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [isSigningIn, setIsSigningIn] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (session) {
       router.push('/dashboard');
     }
   }, [session, router]);
-
-  const handleSignIn = async () => {
-    setIsSigningIn(true);
-    setError(null);
-    
-    try {
-      const result = await signIn('google', { 
-        callbackUrl: '/dashboard',
-        redirect: false 
-      });
-      
-      if (result?.error) {
-        setError(`Sign-in failed: ${result.error}`);
-      } else if (result?.ok) {
-        router.push('/dashboard');
-      }
-    } catch (err) {
-      setError('An unexpected error occurred');
-      console.error('Sign-in error:', err);
-    } finally {
-      setIsSigningIn(false);
-    }
-  };
 
   if (status === 'loading') {
     return (
@@ -64,24 +39,11 @@ export default function Home() {
       </p>
 
       <button
-        onClick={handleSignIn}
-        disabled={isSigningIn}
-        className="px-6 py-3 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+        onClick={() => signIn('google', { callbackUrl: '/dashboard' })}
+        className="px-6 py-3 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors font-medium"
       >
-        {isSigningIn ? 'Signing in...' : 'Sign in with Google'}
+        Sign in with Google
       </button>
-
-      {error && (
-        <div className="text-red-600 text-sm text-center max-w-md">
-          {error}
-        </div>
-      )}
-
-      {/* Debug info */}
-      <div className="text-xs text-gray-400 text-center">
-        <p>Status: {status}</p>
-        <p>Session: {session ? 'Yes' : 'No'}</p>
-      </div>
     </main>
   );
 }
