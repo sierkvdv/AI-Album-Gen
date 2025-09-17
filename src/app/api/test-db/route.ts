@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { createPrismaClient } from '@/lib/prisma';
 
 /**
  * Simple database test route
  */
 export async function GET(req: NextRequest) {
   try {
+    // Create fresh Prisma client for this request
+    const prisma = createPrismaClient();
+    
     // Test basic database connection
     const userCount = await prisma.user.count();
     
