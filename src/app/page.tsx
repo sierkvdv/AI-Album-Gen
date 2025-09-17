@@ -19,24 +19,7 @@ export default function Home() {
   const router = useRouter();
   const [countdown, setCountdown] = useState(3);
 
-  useEffect(() => {
-    if (session) {
-      // User is already signed in; redirect to dashboard after a delay
-      // so they can see their account info
-      const countdownTimer = setInterval(() => {
-        setCountdown((prev) => {
-          if (prev <= 1) {
-            // Use window.location to prevent the redirect loop
-            window.location.href = "/dashboard";
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-      
-      return () => clearInterval(countdownTimer);
-    }
-  }, [session, router]);
+  // No automatic redirect - let user choose what to do
 
   const handleSignIn = async () => {
     // Use NextAuth signIn which will now force account selection
@@ -112,15 +95,8 @@ export default function Home() {
         </div>
         <div className="text-center">
           <p className="text-sm text-gray-500">
-            Redirecting to dashboard in {countdown} seconds...
+            Choose what you want to do:
           </p>
-          <button
-            type="button"
-            onClick={() => window.location.href = "/dashboard"}
-            className="text-sm text-green-600 hover:underline"
-          >
-            Go to dashboard now
-          </button>
         </div>
       </main>
     );

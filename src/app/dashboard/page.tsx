@@ -31,15 +31,28 @@ export default function DashboardPage() {
   // Fetch session and generations on mount
   useEffect(() => {
     async function fetchData() {
-      const sess = await (await fetch('/api/user')).json();
-      if (!sess?.user) {
-        router.push('/');
-        return;
+      try {
+        const sessRes = await fetch('/api/user');
+        const sess = await sessRes.json();
+        
+        if (!sessRes.ok || !sess?.user) {
+          // Only redirect if it's a 401 (unauthorized), not a 500 (server error)
+          if (sessRes.status === 401) {
+            router.push('/');
+            return;
+          }
+          // For other errors, show error message but don't redirect
+          setError('Unable to load user data. Please try refreshing the page.');
+          return;
+        }
+        
+        setSession(sess);
+        const res = await fetch('/api/user/generations');
+        const data = await res.json();
+        setGenerations(data.generations || []);
+      } catch (error) {
+        setError('Failed to load data. Please try refreshing the page.');
       }
-      setSession(sess);
-      const res = await fetch('/api/user/generations');
-      const data = await res.json();
-      setGenerations(data.generations);
     }
     fetchData();
   }, [router]);
