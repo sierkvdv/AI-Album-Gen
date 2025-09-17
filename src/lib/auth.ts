@@ -12,11 +12,19 @@ export const authOptions: NextAuthOptions = {
     signIn: '/',
     error: '/',
   },
+  debug: process.env.NODE_ENV === 'development',
 
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      authorization: {
+        params: {
+          prompt: "consent",
+          access_type: "offline",
+          response_type: "code"
+        }
+      }
     }),
   ],
 
