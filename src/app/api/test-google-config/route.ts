@@ -5,22 +5,22 @@ import { NextResponse } from "next/server";
  */
 export async function GET() {
   try {
-    const AUTH_GOOGLE_ID = process.env.AUTH_GOOGLE_ID || process.env.GOOGLE_CLIENT_ID;
-    const AUTH_GOOGLE_SECRET = process.env.AUTH_GOOGLE_SECRET || process.env.GOOGLE_CLIENT_SECRET;
+  const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || process.env.AUTH_GOOGLE_ID;
+  const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || process.env.AUTH_GOOGLE_SECRET;
     
     // Check if Google OAuth credentials look valid
-    const googleIdValid = AUTH_GOOGLE_ID && AUTH_GOOGLE_ID.length > 50 && AUTH_GOOGLE_ID.includes('.googleusercontent.com');
-    const googleSecretValid = AUTH_GOOGLE_SECRET && AUTH_GOOGLE_SECRET.length > 20;
+    const googleIdValid = GOOGLE_CLIENT_ID && GOOGLE_CLIENT_ID.length > 50 && GOOGLE_CLIENT_ID.includes('.googleusercontent.com');
+    const googleSecretValid = GOOGLE_CLIENT_SECRET && GOOGLE_CLIENT_SECRET.length > 20;
 
     return NextResponse.json({
       success: true,
       googleOAuth: {
-        hasClientId: !!AUTH_GOOGLE_ID,
+        hasClientId: !!GOOGLE_CLIENT_ID,
         clientIdValid: googleIdValid,
-        clientIdPreview: AUTH_GOOGLE_ID ? `${AUTH_GOOGLE_ID.substring(0, 20)}...` : 'missing',
-        hasClientSecret: !!AUTH_GOOGLE_SECRET,
+        clientIdPreview: GOOGLE_CLIENT_ID ? `${GOOGLE_CLIENT_ID.substring(0, 20)}...` : 'missing',
+        hasClientSecret: !!GOOGLE_CLIENT_SECRET,
         clientSecretValid: googleSecretValid,
-        clientSecretPreview: AUTH_GOOGLE_SECRET ? `${AUTH_GOOGLE_SECRET.substring(0, 10)}...` : 'missing',
+        clientSecretPreview: GOOGLE_CLIENT_SECRET ? `${GOOGLE_CLIENT_SECRET.substring(0, 10)}...` : 'missing',
       },
       recommendations: {
         clientId: googleIdValid ? '✅ Google Client ID looks valid' : '❌ Google Client ID is missing or invalid format',
