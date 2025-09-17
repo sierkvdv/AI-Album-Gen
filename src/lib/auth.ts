@@ -10,8 +10,14 @@ export const authOptions: NextAuthOptions = {
   session: { 
     strategy: 'database', 
     maxAge: 7 * 24 * 60 * 60, // 7 days
+    updateAge: 24 * 60 * 60, // Update session every 24 hours
+  },
+  pages: {
+    signIn: '/',
+    error: '/',
   },
   debug: true, // Always debug for now
+  useSecureCookies: process.env.NODE_ENV === 'production',
 
   providers: [
     GoogleProvider({
