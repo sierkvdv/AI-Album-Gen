@@ -1,29 +1,19 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  async headers() {
-    return [
-      {
-        source: '/(.*)',
-        headers: [
-          {
-            key: 'Content-Security-Policy',
-            value: [
-              "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https: http: data: blob:",
-              "style-src 'self' 'unsafe-inline' https: http:",
-              "img-src 'self' data: blob: https: http:",
-              "connect-src 'self' https: http: ws: wss:",
-              "font-src 'self' data: https: http:",
-              "frame-src 'self' https: http: data: blob:",
-              "object-src 'none'",
-              "base-uri 'self'",
-              "form-action 'self'"
-            ].join('; ')
-          }
-        ]
-      }
-    ];
-  },
+  // Temporarily disable CSP to fix login issues
+  // async headers() {
+  //   return [
+  //     {
+  //       source: '/(.*)',
+  //       headers: [
+  //         {
+  //           key: 'Content-Security-Policy',
+  //           value: "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; script-src * 'unsafe-inline' 'unsafe-eval'; style-src * 'unsafe-inline'; img-src * data: blob:; connect-src *; font-src *; frame-src *; object-src 'none';"
+  //         }
+  //       ]
+  //     }
+  //   ];
+  // },
   images: {
     remotePatterns: [
       {

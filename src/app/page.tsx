@@ -20,14 +20,27 @@ export default function Home() {
     setIsLoading(true);
     
     try {
-      // Use direct redirect to avoid race conditions
-      await signIn('google', { 
+      // Try multiple approaches to ensure login works
+      const result = await signIn('google', { 
         callbackUrl: '/dashboard',
-        redirect: true
+        redirect: false
       });
+      
+      if (result?.error) {
+        console.error('Sign in error:', result.error);
+        // Fallback: try with redirect
+        window.location.href = '/api/auth/signin/google?callbackUrl=/dashboard';
+      } else if (result?.ok) {
+        // Success: redirect manually
+        window.location.href = '/dashboard';
+      } else {
+        // No result: try direct redirect
+        window.location.href = '/api/auth/signin/google?callbackUrl=/dashboard';
+      }
     } catch (error) {
       console.error('Sign in error:', error);
-      setIsLoading(false);
+      // Fallback: direct redirect
+      window.location.href = '/api/auth/signin/google?callbackUrl=/dashboard';
     }
   };
 
