@@ -26,7 +26,8 @@ export default function Home() {
       const countdownTimer = setInterval(() => {
         setCountdown((prev) => {
           if (prev <= 1) {
-            router.push("/dashboard");
+            // Use window.location to prevent the redirect loop
+            window.location.href = "/dashboard";
             return 0;
           }
           return prev - 1;
@@ -39,7 +40,7 @@ export default function Home() {
 
   const handleSignIn = async () => {
     // Use NextAuth signIn which will now force account selection
-    await signIn("google", { callbackUrl: "/" });
+    await signIn("google", { callbackUrl: "/dashboard" });
   };
 
   const handleSignOut = async () => {
@@ -68,7 +69,7 @@ export default function Home() {
         <div className="flex gap-4">
           <button
             type="button"
-            onClick={() => router.push("/dashboard")}
+            onClick={() => window.location.href = "/dashboard"}
             className="rounded bg-green-600 px-4 py-2 font-semibold text-white hover:bg-green-700 focus:outline-none"
           >
             Go to Dashboard
@@ -115,7 +116,7 @@ export default function Home() {
           </p>
           <button
             type="button"
-            onClick={() => router.push("/dashboard")}
+            onClick={() => window.location.href = "/dashboard"}
             className="text-sm text-green-600 hover:underline"
           >
             Go to dashboard now
