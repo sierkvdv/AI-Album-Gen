@@ -1,8 +1,18 @@
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
-import type { NextRequest } from "next/server";
 
-const handler = NextAuth({
+// Force the correct production URL
+if (process.env.NODE_ENV === "production" && process.env.VERCEL) {
+  delete process.env.NEXTAUTH_URL;
+  process.env.NEXTAUTH_URL = "https://ai-album-gen.vercel.app";
+}
+
+export const {
+  handlers,
+  auth,
+  signIn,
+  signOut,
+} = NextAuth({
   secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
   providers: [
     GoogleProvider({
@@ -11,33 +21,28 @@ const handler = NextAuth({
     }),
   ],
   session: {
-    strategy: "jwt" as const,
+    strategy: "jwt",
   },
   callbacks: {
-    async jwt({ token, user }: any) {
+    async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
       }
       return token;
     },
-    async session({ session, token }: any) {
+    async session({ session, token }) {
       if (session?.user && token) {
         (session.user as any).id = token.id;
       }
       return session;
     },
   },
+  trustHost: true,
+  debug: true,
   pages: {
     signIn: "/",
     error: "/",
   },
-  debug: true,
 });
 
-export async function GET(request: NextRequest) {
-  return handler(request);
-}
-
-export async function POST(request: NextRequest) {
-  return handler(request);
-}
+export const { GET, POST } = handlers;
