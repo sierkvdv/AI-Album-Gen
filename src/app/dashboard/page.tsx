@@ -194,17 +194,25 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             {generations.map((gen) => (
               <div key={gen.id} className="bg-white p-2 rounded shadow">
-                <img
-                  src={`/api/image/${gen.id}`}
-                  alt={gen.prompt}
-                  className="w-full h-auto rounded"
-                  onError={(e) => {
-                    // Show placeholder if image fails to load
-                    const target = e.target as HTMLImageElement;
-                    target.src = '/placeholder_light_gray_block.png';
-                    target.alt = 'Image expired - placeholder shown';
-                  }}
-                />
+                <div className="relative aspect-square bg-gray-100 rounded overflow-hidden">
+                  <img
+                    src={`/api/image/${gen.id}`}
+                    alt={gen.prompt}
+                    className="w-full h-full object-cover transition-opacity duration-300"
+                    onError={(e) => {
+                      // Show placeholder if image fails to load
+                      const target = e.target as HTMLImageElement;
+                      target.src = '/placeholder_light_gray_block.png';
+                      target.alt = 'Image expired - placeholder shown';
+                      target.classList.add('opacity-50');
+                    }}
+                    onLoad={(e) => {
+                      // Remove placeholder styling if image loads successfully
+                      const target = e.target as HTMLImageElement;
+                      target.classList.remove('opacity-50');
+                    }}
+                  />
+                </div>
                 <div className="mt-2 text-sm">
                   <p className="font-medium">{gen.prompt}</p>
                   <p className="text-gray-500">{gen.style}</p>

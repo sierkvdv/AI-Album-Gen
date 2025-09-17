@@ -39,45 +39,39 @@ export async function GET(
       return NextResponse.json({ error: 'Generation not found' }, { status: 404 });
     }
     
-    // Try to fetch the image from Azure Storage
+    // Try to fetch the image from the stored URL
     try {
-      const imageResponse = await fetch(generation.imageUrl);
+      // Add timeout to prevent hanging requests
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      
+      const imageResponse = await fetch(generation.imageUrl, {
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; AlbumCoverBot/1.0)'
+        }
+      });
+      
+      clearTimeout(timeoutId);
       
       if (!imageResponse.ok) {
-        // If the URL is expired, serve a placeholder image
+        // If the URL is expired, serve a placeholder image immediately
         console.log('Image URL expired, serving placeholder:', generation.imageUrl);
         
-        // Try to serve the placeholder image from public folder
-        try {
-          const placeholderResponse = await fetch(`${process.env.NEXTAUTH_URL || 'https://ai-album-gen.vercel.app'}/placeholder_light_gray_block.png`);
-          if (placeholderResponse.ok) {
-            const placeholderBuffer = await placeholderResponse.arrayBuffer();
-            const contentType = placeholderResponse.headers.get('content-type') || 'image/png';
-            
-            return new NextResponse(placeholderBuffer, {
-              headers: {
-                'Content-Type': contentType,
-                'Cache-Control': 'public, max-age=3600',
-                'X-Image-Status': 'expired-placeholder'
-              },
-            });
-          }
-        } catch (placeholderError) {
-          console.error('Error serving placeholder:', placeholderError);
+        // Serve placeholder directly without additional fetch
+        const placeholderResponse = await fetch(`${process.env.NEXTAUTH_URL || 'https://ai-album-gen.vercel.app'}/placeholder_light_gray_block.png`);
+        if (placeholderResponse.ok) {
+          const placeholderBuffer = await placeholderResponse.arrayBuffer();
+          const contentType = placeholderResponse.headers.get('content-type') || 'image/png';
+          
+          return new NextResponse(placeholderBuffer, {
+            headers: {
+              'Content-Type': contentType,
+              'Cache-Control': 'public, max-age=3600',
+              'X-Image-Status': 'expired-placeholder'
+            },
+          });
         }
-        
-        // Fallback: return a simple error message
-        return new NextResponse(
-          JSON.stringify({ 
-            error: 'Image URL expired',
-            message: 'The image URL has expired. Please regenerate the image.',
-            originalUrl: generation.imageUrl
-          }), 
-          { 
-            status: 410,
-            headers: { 'Content-Type': 'application/json' }
-          }
-        );
       }
       
       // Get the image data
