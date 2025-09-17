@@ -2,9 +2,11 @@ import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 
 // Force the correct production URL
-if (process.env.NODE_ENV === "production" && process.env.VERCEL) {
+if (process.env.NODE_ENV === "production") {
   delete process.env.NEXTAUTH_URL;
+  delete process.env.VERCEL_URL;
   process.env.NEXTAUTH_URL = "https://ai-album-gen.vercel.app";
+  process.env.VERCEL_URL = "ai-album-gen.vercel.app";
 }
 
 const {
@@ -38,6 +40,7 @@ const {
     },
   },
   trustHost: true,
+  basePath: "/api/auth",
   debug: true,
   pages: {
     signIn: "/",
