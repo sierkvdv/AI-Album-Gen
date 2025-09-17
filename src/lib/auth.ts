@@ -17,11 +17,6 @@ export const authOptions: NextAuthOptions = {
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      authorization: {
-        params: {
-          scope: "openid email profile",
-        }
-      }
     }),
   ],
 
@@ -36,8 +31,10 @@ export const authOptions: NextAuthOptions = {
       }
       return session;
     },
-    // Simplified redirect - always go to dashboard
     async redirect({ url, baseUrl }) {
+      // interne urls
+      if (url.startsWith('/')) return `${baseUrl}${url}`;
+      try { if (new URL(url).origin === baseUrl) return url; } catch {}
       return `${baseUrl}/dashboard`;
     },
   },
