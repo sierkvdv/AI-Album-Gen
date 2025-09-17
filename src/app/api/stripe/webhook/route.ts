@@ -29,10 +29,11 @@ export async function POST(req: NextRequest) {
       const currency = (session.currency || 'usd').toLowerCase();
       const stripeSessionId = String(session.id);
 
-      await prisma.$transaction([
-        prisma.user.update({ where: { id: userId }, data: { credits: { increment: credits } } }),
-        prisma.payment.create({ data: { userId, stripeSessionId, credits, amount: amountTotal, currency } }),
-        prisma.creditLedger.create({
+      const db = prisma();
+      await db.$transaction([
+        db.user.update({ where: { id: userId }, data: { credits: { increment: credits } } }),
+        db.payment.create({ data: { userId, stripeSessionId, credits, amount: amountTotal, currency } }),
+        db.creditLedger.create({
           data: { userId, type: LedgerType.PURCHASE, amount: credits, reference: stripeSessionId },
         }),
       ]);

@@ -4,7 +4,8 @@ import { prisma } from '@/lib/prisma';
 export async function GET() {
   try {
     // Deze query test alleen of de database bereikbaar is.
-    await prisma.user.count();
+    const db = prisma();
+    await db.user.count();
     return NextResponse.json({ ok: true });
   } catch (e: any) {
     return NextResponse.json(

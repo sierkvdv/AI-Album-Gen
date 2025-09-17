@@ -15,7 +15,8 @@ export async function POST(req: NextRequest) {
   
   try {
     // Find user in database by email
-    const user = await prisma.user.findUnique({
+    const db = prisma();
+    const user = await db.user.findUnique({
       where: { email: session.user.email },
     });
     
@@ -24,7 +25,7 @@ export async function POST(req: NextRequest) {
     }
     
     // Get all generations for this user
-    const generations = await prisma.generation.findMany({
+    const generations = await db.generation.findMany({
       where: { userId: user.id },
       orderBy: { createdAt: 'desc' },
     });

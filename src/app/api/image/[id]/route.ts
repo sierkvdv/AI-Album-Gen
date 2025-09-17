@@ -18,7 +18,8 @@ export async function GET(
   
   try {
     // Find user in database by email
-    const user = await prisma.user.findUnique({
+    const db = prisma();
+    const user = await db.user.findUnique({
       where: { email: session.user.email },
     });
     
@@ -27,7 +28,7 @@ export async function GET(
     }
     
     // Find the generation by ID and ensure it belongs to this user
-    const generation = await prisma.generation.findFirst({
+    const generation = await db.generation.findFirst({
       where: { 
         id: params.id,
         userId: user.id 
