@@ -1,18 +1,41 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true,
-  swcMinify: true,
-  images: {
-    domains: ["images.unsplash.com", "cdn.openai.com", "files.stripe.com"],
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'Content-Security-Policy',
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://js.stripe.com https://m.stripe.network",
+              "style-src 'self' 'unsafe-inline'",
+              "img-src 'self' blob: data: https://lh3.googleusercontent.com https://oaidalleapiprodscus.blob.core.windows.net",
+              "connect-src 'self' https://api.openai.com https://accounts.google.com",
+              "font-src 'self'",
+              "frame-src 'self' https://accounts.google.com"
+            ].join('; ')
+          }
+        ]
+      }
+    ];
   },
-  webpack: (config) => {
-    config.resolve.fallback = {
-      ...(config.resolve.fallback || {}),
-      fs: false,
-      path: false,
-      os: false,
-    };
-    return config;
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
+        port: '',
+        pathname: '**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'oaidalleapiprodscus.blob.core.windows.net',
+        port: '',
+        pathname: '**',
+      },
+    ],
   },
 };
 

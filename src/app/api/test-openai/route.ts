@@ -28,11 +28,19 @@ export async function GET() {
 
     if (!res.ok) {
       const errorText = await res.text();
+      let errorDetails;
+      try {
+        errorDetails = JSON.parse(errorText);
+      } catch {
+        errorDetails = errorText;
+      }
+      
       return NextResponse.json({
         error: `OpenAI API error: ${res.status}`,
-        details: errorText,
+        details: errorDetails,
         hasKey: true,
-        apiWorking: false
+        apiWorking: false,
+        status: res.status
       }, { status: 500 });
     }
 
