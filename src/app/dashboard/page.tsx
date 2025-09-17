@@ -211,36 +211,64 @@ export default function DashboardPage() {
                   <p className="text-gray-400">
                     {new Date(gen.createdAt).toLocaleString()}
                   </p>
-                  <a
-                    href={`/api/image/${gen.id}`}
-                    download={`album-cover-${gen.id}.png`}
-                    className="text-blue-600 hover:underline text-xs mt-1 inline-block"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      // Try to download via proxy, show alert if expired
-                      fetch(`/api/image/${gen.id}`)
-                        .then(response => {
-                          if (response.ok) {
-                            return response.blob();
-                          } else {
-                            throw new Error('Image expired or unavailable');
+                  <div className="flex gap-2 mt-1">
+                    <a
+                      href={`/api/image/${gen.id}`}
+                      download={`album-cover-${gen.id}.png`}
+                      className="text-blue-600 hover:underline text-xs"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        // Try to download via proxy, show alert if expired
+                        fetch(`/api/image/${gen.id}`)
+                          .then(response => {
+                            if (response.ok) {
+                              return response.blob();
+                            } else {
+                              throw new Error('Image expired or unavailable');
+                            }
+                          })
+                          .then(blob => {
+                            const url = window.URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `album-cover-${gen.id}.png`;
+                            a.click();
+                            window.URL.revokeObjectURL(url);
+                          })
+                          .catch(error => {
+                            alert('This image is no longer available for download. The URL has expired. Use the Regenerate button to get a fresh image.');
+                          });
+                      }}
+                    >
+                      Download
+                    </a>
+                    <button
+                      className="text-green-600 hover:underline text-xs"
+                      onClick={async () => {
+                        if (confirm('Regenerate this image? This will use 1 credit and create a new image URL.')) {
+                          try {
+                            const response = await fetch('/api/regenerate-image', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ generationId: gen.id })
+                            });
+                            
+                            if (response.ok) {
+                              alert('Image regenerated successfully! Refresh the page to see the new image.');
+                              window.location.reload();
+                            } else {
+                              const error = await response.json();
+                              alert(`Failed to regenerate: ${error.message || 'Unknown error'}`);
+                            }
+                          } catch (error) {
+                            alert('Failed to regenerate image. Please try again.');
                           }
-                        })
-                        .then(blob => {
-                          const url = window.URL.createObjectURL(blob);
-                          const a = document.createElement('a');
-                          a.href = url;
-                          a.download = `album-cover-${gen.id}.png`;
-                          a.click();
-                          window.URL.revokeObjectURL(url);
-                        })
-                        .catch(error => {
-                          alert('This image is no longer available for download. The URL has expired.');
-                        });
-                    }}
-                  >
-                    Download
-                  </a>
+                        }
+                      }}
+                    >
+                      Regenerate
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}

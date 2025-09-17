@@ -44,7 +44,29 @@ export async function GET(
       const imageResponse = await fetch(generation.imageUrl);
       
       if (!imageResponse.ok) {
-        // If the URL is expired, return a placeholder or error
+        // If the URL is expired, serve a placeholder image
+        console.log('Image URL expired, serving placeholder:', generation.imageUrl);
+        
+        // Try to serve the placeholder image from public folder
+        try {
+          const placeholderResponse = await fetch(`${process.env.NEXTAUTH_URL || 'https://ai-album-gen.vercel.app'}/placeholder_light_gray_block.png`);
+          if (placeholderResponse.ok) {
+            const placeholderBuffer = await placeholderResponse.arrayBuffer();
+            const contentType = placeholderResponse.headers.get('content-type') || 'image/png';
+            
+            return new NextResponse(placeholderBuffer, {
+              headers: {
+                'Content-Type': contentType,
+                'Cache-Control': 'public, max-age=3600',
+                'X-Image-Status': 'expired-placeholder'
+              },
+            });
+          }
+        } catch (placeholderError) {
+          console.error('Error serving placeholder:', placeholderError);
+        }
+        
+        // Fallback: return a simple error message
         return new NextResponse(
           JSON.stringify({ 
             error: 'Image URL expired',
