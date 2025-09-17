@@ -5,11 +5,21 @@ import { prisma } from '@/lib/prisma';
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user || !(session.user as any).id) {
+  if (!session?.user?.email) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+  
+  // Find user in database by email
+  const user = await prisma.user.findUnique({
+    where: { email: session.user.email },
+  });
+  
+  if (!user) {
+    return NextResponse.json({ error: 'User not found' }, { status: 404 });
+  }
+  
   const generations = await prisma.generation.findMany({
-    where: { userId: (session.user as any).id },
+    where: { userId: user.id },
     orderBy: { createdAt: 'desc' },
   });
   return NextResponse.json({ generations });
