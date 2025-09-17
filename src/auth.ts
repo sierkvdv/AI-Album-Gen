@@ -100,12 +100,18 @@ export const {
         // Look up credits and admin flag from the database.  Keep this logic in
         // the JWT callback so that the session remains in sync when credits are
         // updated.
-        const dbUser = await prisma.user.findUnique({
-          where: { id: user.id as string },
-          select: { credits: true, isAdmin: true },
-        });
-        token.credits = dbUser?.credits ?? 0;
-        token.isAdmin = dbUser?.isAdmin ?? false;
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: user.id as string },
+            select: { credits: true, isAdmin: true },
+          });
+          token.credits = dbUser?.credits ?? 0;
+          token.isAdmin = dbUser?.isAdmin ?? false;
+        } catch (error) {
+          console.error('Error fetching user data in JWT callback:', error);
+          token.credits = 0;
+          token.isAdmin = false;
+        }
       }
       return token;
     },
@@ -122,32 +128,41 @@ export const {
     async createUser({ user }) {
       // Grant exactly 5 credits once on account creation. Guard against
       // double‑grants by checking if the user already has any credits.
-      if (!user.id) return; // Guard against undefined user ID
+      if (!user.id) {
+        console.error('createUser event: user.id is undefined');
+        return;
+      }
       
-      const userId = user.id; // Store user ID in local variable
-      await prisma.$transaction(async (tx) => {
-        const existing = await tx.user.findUnique({
-          where: { id: userId },
-          select: { credits: true },
+      const userId = user.id;
+      try {
+        await prisma.$transaction(async (tx) => {
+          const existing = await tx.user.findUnique({
+            where: { id: userId },
+            select: { credits: true },
+          });
+          if (!existing || existing.credits > 0) return;
+          await tx.user.update({
+            where: { id: userId },
+            data: { credits: 5 },
+          });
+          await tx.creditLedger.create({
+            data: {
+              userId,
+              type: LedgerType.GRANT,
+              amount: 5,
+              reference: "first_login_bonus",
+            },
+          });
         });
-        if (!existing || existing.credits > 0) return;
-        await tx.user.update({
-          where: { id: userId },
-          data: { credits: 5 },
-        });
-        await tx.creditLedger.create({
-          data: {
-            userId,
-            type: LedgerType.GRANT,
-            amount: 5,
-            reference: "first_login_bonus",
-          },
-        });
-      });
+      } catch (error) {
+        console.error('Error in createUser event:', error);
+      }
     },
   },
   pages: {
     // Redirect unknown sign‑ins to the home page.
     signIn: "/",
+    error: "/",
   },
+  debug: process.env.NODE_ENV === "development",
 } satisfies NextAuthConfig);
