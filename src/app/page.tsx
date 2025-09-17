@@ -76,6 +76,12 @@ export default function Home() {
             >
               Test Auth Status
             </a>
+            <a 
+              href="/api/debug-oauth"
+              className="text-purple-600 hover:underline block"
+            >
+              Debug OAuth Config
+            </a>
           </div>
         </div>
       </div>
