@@ -186,8 +186,10 @@ export default function DashboardPage() {
                   alt={gen.prompt}
                   className="w-full h-auto rounded"
                   onError={(e) => {
-                    // Fallback to original URL if proxy fails
-                    (e.target as HTMLImageElement).src = gen.imageUrl;
+                    // Show placeholder if image fails to load
+                    const target = e.target as HTMLImageElement;
+                    target.src = '/placeholder_light_gray_block.png';
+                    target.alt = 'Image expired - placeholder shown';
                   }}
                 />
                 <div className="mt-2 text-sm">
@@ -201,9 +203,27 @@ export default function DashboardPage() {
                     download={`album-cover-${gen.id}.png`}
                     className="text-blue-600 hover:underline text-xs mt-1 inline-block"
                     onClick={(e) => {
-                      // If proxy fails, try original URL
                       e.preventDefault();
-                      window.open(`/api/image/${gen.id}`, '_blank');
+                      // Try to download via proxy, show alert if expired
+                      fetch(`/api/image/${gen.id}`)
+                        .then(response => {
+                          if (response.ok) {
+                            return response.blob();
+                          } else {
+                            throw new Error('Image expired or unavailable');
+                          }
+                        })
+                        .then(blob => {
+                          const url = window.URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `album-cover-${gen.id}.png`;
+                          a.click();
+                          window.URL.revokeObjectURL(url);
+                        })
+                        .catch(error => {
+                          alert('This image is no longer available for download. The URL has expired.');
+                        });
                     }}
                   >
                     Download

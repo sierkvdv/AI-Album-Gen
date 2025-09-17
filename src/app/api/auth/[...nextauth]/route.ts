@@ -43,8 +43,9 @@ export const authOptions = {
       return session;
     },
     async redirect({ url, baseUrl }) {
-      if (url.startsWith("/")) return `${baseUrl}${url}`;
-      else if (new URL(url).origin === baseUrl) return url;
+      // Always redirect to dashboard after login
+      if (url.startsWith("/")) return `${baseUrl}/dashboard`;
+      else if (new URL(url).origin === baseUrl) return `${baseUrl}/dashboard`;
       return `${baseUrl}/dashboard`;
     },
   },

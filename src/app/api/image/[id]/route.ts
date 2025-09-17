@@ -38,13 +38,50 @@ export async function GET(
       return NextResponse.json({ error: 'Generation not found' }, { status: 404 });
     }
     
-    // For now, redirect to the original URL
-    // In a real implementation, you would:
-    // 1. Check if the URL is expired
-    // 2. Generate a new SAS token if needed
-    // 3. Proxy the image content
-    
-    return NextResponse.redirect(generation.imageUrl);
+    // Try to fetch the image from Azure Storage
+    try {
+      const imageResponse = await fetch(generation.imageUrl);
+      
+      if (!imageResponse.ok) {
+        // If the URL is expired, return a placeholder or error
+        return new NextResponse(
+          JSON.stringify({ 
+            error: 'Image URL expired',
+            message: 'The image URL has expired. Please regenerate the image.',
+            originalUrl: generation.imageUrl
+          }), 
+          { 
+            status: 410,
+            headers: { 'Content-Type': 'application/json' }
+          }
+        );
+      }
+      
+      // Get the image data
+      const imageBuffer = await imageResponse.arrayBuffer();
+      const contentType = imageResponse.headers.get('content-type') || 'image/png';
+      
+      // Return the image data
+      return new NextResponse(imageBuffer, {
+        headers: {
+          'Content-Type': contentType,
+          'Cache-Control': 'public, max-age=3600', // Cache for 1 hour
+        },
+      });
+      
+    } catch (error) {
+      console.error('Error fetching image:', error);
+      return new NextResponse(
+        JSON.stringify({ 
+          error: 'Failed to fetch image',
+          message: 'Could not retrieve the image from storage.'
+        }), 
+        { 
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
+    }
     
   } catch (error) {
     console.error('Image proxy error:', error);
