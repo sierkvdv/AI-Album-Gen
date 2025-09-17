@@ -9,18 +9,26 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   
-  // Find user in database by email
-  const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
-  });
-  
-  if (!user) {
-    return NextResponse.json({ error: 'User not found' }, { status: 404 });
+  try {
+    // Find user in database by email
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+    });
+    
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+    
+    const generations = await prisma.generation.findMany({
+      where: { userId: user.id },
+      orderBy: { createdAt: 'desc' },
+    });
+    return NextResponse.json({ generations });
+  } catch (error) {
+    console.error('Generations API error:', error);
+    return NextResponse.json({ 
+      error: 'Database error',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
-  
-  const generations = await prisma.generation.findMany({
-    where: { userId: user.id },
-    orderBy: { createdAt: 'desc' },
-  });
-  return NextResponse.json({ generations });
 }

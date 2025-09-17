@@ -9,14 +9,22 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ user: null }, { status: 401 });
   }
   
-  // Find user in database by email
-  const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
-  });
-  
-  if (!user) {
-    return NextResponse.json({ user: null }, { status: 404 });
+  try {
+    // Find user in database by email
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+    });
+    
+    if (!user) {
+      return NextResponse.json({ user: null }, { status: 404 });
+    }
+    
+    return NextResponse.json({ user });
+  } catch (error) {
+    console.error('User API error:', error);
+    return NextResponse.json({ 
+      error: 'Database error',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
-  
-  return NextResponse.json({ user });
 }

@@ -10,9 +10,6 @@ export async function GET(req: NextRequest) {
   }
   
   try {
-    // Test database connection first
-    await prisma.$connect();
-    
     // Get user by email
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
@@ -58,8 +55,5 @@ export async function GET(req: NextRequest) {
     };
     
     return NextResponse.json(errorDetails, { status: 500 });
-  } finally {
-    // Always disconnect
-    await prisma.$disconnect();
   }
 }
