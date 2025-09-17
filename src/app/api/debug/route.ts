@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { createPrismaClient } from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -11,10 +11,10 @@ export async function GET(req: NextRequest) {
   
   try {
     // Create fresh Prisma client for this request
-    const prisma = createPrismaClient();
+    const db = prisma();
     
     // Get user by email
-    const user = await prisma.user.findUnique({
+    const user = await db.user.findUnique({
       where: { email: session.user.email },
       include: {
         generations: {
@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
     
     if (!user) {
       // Try to find all users to see if database is working
-      const allUsers = await prisma.user.findMany({
+      const allUsers = await db.user.findMany({
         select: { id: true, email: true, name: true }
       });
       

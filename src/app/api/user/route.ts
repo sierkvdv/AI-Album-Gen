@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { createPrismaClient } from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
 
 export async function GET(req: NextRequest) {
   try {
@@ -11,10 +11,10 @@ export async function GET(req: NextRequest) {
     }
     
     // Create fresh Prisma client for this request
-    const prisma = createPrismaClient();
+    const db = prisma();
     
     // Find user in database by email
-    const user = await prisma.user.findUnique({
+    const user = await db.user.findUnique({
       where: { email: session.user.email },
     });
     
