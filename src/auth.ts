@@ -119,19 +119,20 @@ export const {
       // double‑grants by checking if the user already has any credits.
       if (!user.id) return; // Guard against undefined user ID
       
+      const userId = user.id; // Store user ID in local variable
       await prisma.$transaction(async (tx) => {
         const existing = await tx.user.findUnique({
-          where: { id: user.id },
+          where: { id: userId },
           select: { credits: true },
         });
         if (!existing || existing.credits > 0) return;
         await tx.user.update({
-          where: { id: user.id },
+          where: { id: userId },
           data: { credits: 5 },
         });
         await tx.creditLedger.create({
           data: {
-            userId: user.id,
+            userId,
             type: LedgerType.GRANT,
             amount: 5,
             reference: "first_login_bonus",
