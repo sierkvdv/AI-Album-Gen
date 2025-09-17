@@ -24,9 +24,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
-  // Fetch the style descriptor from some data source.  In this example
-  // we assume style presets are defined in a static JSON file.
-  const stylePresets = require("@/app/styles.json");
+  // Import style presets from the existing configuration
+  const { stylePresets } = await import("@/lib/stylePresets");
   const preset = stylePresets.find((p: any) => p.id === styleId);
   if (!preset) {
     return NextResponse.json({ error: "Invalid style preset" }, { status: 400 });
@@ -61,7 +60,7 @@ export async function POST(request: Request) {
     await tx.creditLedger.create({
       data: {
         userId: session.user.id,
-        type: LedgerType.DEBIT,
+        type: LedgerType.USE,
         amount: 1,
         reference: "generate",
       },

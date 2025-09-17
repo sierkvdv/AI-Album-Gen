@@ -1,10 +1,9 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { auth } from '@/auth';
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth();
     
     return NextResponse.json({
       hasSession: !!session,
@@ -17,10 +16,10 @@ export async function GET() {
         }
       } : null,
       authConfig: {
-        hasGoogleClientId: !!process.env.GOOGLE_CLIENT_ID,
-        hasGoogleClientSecret: !!process.env.GOOGLE_CLIENT_SECRET,
-        hasNextAuthSecret: !!process.env.NEXTAUTH_SECRET,
-        hasNextAuthUrl: !!process.env.NEXTAUTH_URL
+        hasGoogleClientId: !!process.env.AUTH_GOOGLE_ID,
+        hasGoogleClientSecret: !!process.env.AUTH_GOOGLE_SECRET,
+        hasAuthSecret: !!process.env.AUTH_SECRET,
+        hasTrustHost: !!process.env.AUTH_TRUST_HOST
       }
     });
   } catch (error) {

@@ -36,8 +36,8 @@ export async function createCheckoutSession(userId: string, credits: number) {
       userId,
       credits: String(credits),
     },
-    success_url: `${process.env.NEXTAUTH_URL}/dashboard?success=true`,
-    cancel_url: `${process.env.NEXTAUTH_URL}/dashboard?canceled=true`,
+    success_url: `${process.env.CANONICAL_HOST || 'http://localhost:3000'}/dashboard?success=true`,
+    cancel_url: `${process.env.CANONICAL_HOST || 'http://localhost:3000'}/dashboard?canceled=true`,
   });
   return session.id;
 }

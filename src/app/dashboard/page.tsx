@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { stylePresets } from '@/lib/stylePresets';
 import { loadStripe } from '@stripe/stripe-js';
