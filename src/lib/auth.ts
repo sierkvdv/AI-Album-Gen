@@ -7,29 +7,43 @@ import { LedgerType } from '@prisma/client';
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
-  // Database sessions zijn prima; je hebt de tabellen al. Desgewenst kun je naar 'jwt' wisselen.
-  session: { strategy: 'database', maxAge: 30 * 24 * 60 * 60 },
+  // JWT sessions zijn betrouwbaarder dan database sessions
+  session: { strategy: 'jwt', maxAge: 30 * 24 * 60 * 60 },
+  pages: {
+    signIn: '/',
+    error: '/',
+  },
 
   providers: [
-    // (Zet EmailProvider pas aan als je SMTP hebt)
-    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
-      ? [GoogleProvider({
-          clientId: process.env.GOOGLE_CLIENT_ID!,
-          clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-        })]
-      : []),
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    }),
   ],
 
   secret: process.env.NEXTAUTH_SECRET,
 
   callbacks: {
-    async session({ session, user }) {
-      if (session?.user) {
-        (session.user as any).id = user.id;
-        (session.user as any).credits = (user as any).credits;
-        (session.user as any).isAdmin = (user as any).isAdmin;
+    async session({ session, token }) {
+      if (session?.user && token) {
+        (session.user as any).id = token.sub;
+        // Haal user data op uit database voor credits en admin status
+        const user = await prisma.user.findUnique({
+          where: { id: token.sub },
+          select: { credits: true, isAdmin: true }
+        });
+        if (user) {
+          (session.user as any).credits = user.credits;
+          (session.user as any).isAdmin = user.isAdmin;
+        }
       }
       return session;
+    },
+    async jwt({ token, user }) {
+      if (user) {
+        token.sub = user.id;
+      }
+      return token;
     },
     // Zorgt dat iedere geslaagde login naar /dashboard gaat
     async redirect({ url, baseUrl }) {
