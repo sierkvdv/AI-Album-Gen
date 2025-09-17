@@ -26,7 +26,8 @@ export default function Home() {
   }, [session, router]);
 
   const handleSignIn = async () => {
-    await signIn("google", { callbackUrl: "/dashboard" });
+    // Direct redirect to Google OAuth
+    window.location.href = "/api/auth/signin/google";
   };
 
   // While the session is loading we can show a minimal spinner/message.
