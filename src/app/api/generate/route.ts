@@ -15,7 +15,7 @@ import { LedgerType } from "@prisma/client";
  */
 export async function POST(request: Request) {
   const session = await auth();
-  if (!session?.user) {
+  if (!session?.user || !session.user.id) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
@@ -32,8 +32,9 @@ export async function POST(request: Request) {
   }
 
   // Check if the user has enough credits.
+  const userId = session.user.id;
   const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
+    where: { id: userId },
     select: { credits: true },
   });
   if (!user || user.credits <= 0) {
@@ -48,19 +49,19 @@ export async function POST(request: Request) {
   await prisma.$transaction(async (tx) => {
     await tx.generation.create({
       data: {
-        userId: session.user.id,
+        userId,
         prompt,
         style: preset.name,
         imageUrl,
       },
     });
     await tx.user.update({
-      where: { id: session.user.id },
+      where: { id: userId },
       data: { credits: { decrement: 1 } },
     });
     await tx.creditLedger.create({
       data: {
-        userId: session.user.id,
+        userId,
         type: LedgerType.USE,
         amount: 1,
         reference: "generate",
