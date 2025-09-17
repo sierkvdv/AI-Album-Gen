@@ -33,4 +33,5 @@ export const {
   },
   trustHost: true,
   debug: true,
+  // Force new deployment to clear Vercel cache
 });
