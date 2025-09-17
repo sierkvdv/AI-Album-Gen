@@ -9,12 +9,7 @@ if (process.env.NODE_ENV === "production") {
   process.env.VERCEL_URL = "ai-album-gen.vercel.app";
 }
 
-const {
-  handlers,
-  auth,
-  signIn,
-  signOut,
-} = NextAuth({
+const authOptions = {
   secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
   providers: [
     GoogleProvider({
@@ -24,6 +19,15 @@ const {
   ],
   trustHost: true,
   debug: true,
-});
+  callbacks: {
+    async redirect({ url, baseUrl }) {
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      else if (new URL(url).origin === baseUrl) return url;
+      return `${baseUrl}/dashboard`;
+    },
+  },
+};
 
-export const { GET, POST } = handlers;
+const handler = NextAuth(authOptions);
+
+export { handler as GET, handler as POST };
