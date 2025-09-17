@@ -59,8 +59,7 @@ export async function POST(req: NextRequest) {
       await tx.generation.update({
         where: { id: generationId },
         data: { 
-          imageUrl: newImageUrl,
-          updatedAt: new Date()
+          imageUrl: newImageUrl
         },
       });
 
