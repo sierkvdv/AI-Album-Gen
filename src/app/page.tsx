@@ -10,7 +10,9 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
+    console.log('Session status changed:', { status, session: !!session });
     if (session) {
+      console.log('Session found, redirecting to dashboard');
       router.push('/dashboard');
     }
   }, [session, router]);
@@ -33,7 +35,14 @@ export default function Home() {
   if (status === 'loading') {
     return (
       <main className="flex flex-col items-center justify-center p-8 space-y-6">
-        <div className="text-lg">Loading...</div>
+        <div className="text-lg">Loading session...</div>
+        <div className="text-sm text-gray-500">Status: {status}</div>
+        <button 
+          onClick={() => window.location.reload()} 
+          className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+        >
+          Refresh Page
+        </button>
       </main>
     );
   }

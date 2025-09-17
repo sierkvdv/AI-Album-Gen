@@ -8,9 +8,8 @@ import { LedgerType } from '@prisma/client';
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   session: { 
-    strategy: 'database', 
+    strategy: 'jwt', 
     maxAge: 7 * 24 * 60 * 60, // 7 days
-    updateAge: 24 * 60 * 60, // Update session every 24 hours
   },
   pages: {
     signIn: '/',
@@ -29,11 +28,24 @@ export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
 
   callbacks: {
-    async session({ session, user }) {
-      if (session?.user) {
-        (session.user as any).id = user.id;
-        (session.user as any).credits = (user as any).credits;
-        (session.user as any).isAdmin = (user as any).isAdmin;
+    async jwt({ token, user, account }) {
+      if (user) {
+        token.id = user.id;
+        // Get user data from database
+        const dbUser = await prisma.user.findUnique({
+          where: { id: user.id },
+          select: { credits: true, isAdmin: true }
+        });
+        token.credits = dbUser?.credits || 0;
+        token.isAdmin = dbUser?.isAdmin || false;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (session?.user && token) {
+        (session.user as any).id = token.id;
+        (session.user as any).credits = token.credits;
+        (session.user as any).isAdmin = token.isAdmin;
       }
       return session;
     },
