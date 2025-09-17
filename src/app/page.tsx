@@ -3,7 +3,7 @@
 
 import { useSession, signIn, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 /**
  * Landing page for unauthenticated users.
@@ -17,11 +17,23 @@ import { useEffect } from "react";
 export default function Home() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const [countdown, setCountdown] = useState(3);
 
   useEffect(() => {
     if (session) {
-      // User is already signed in; redirect to dashboard.
-      router.push("/dashboard");
+      // User is already signed in; redirect to dashboard after a delay
+      // so they can see their account info
+      const countdownTimer = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            router.push("/dashboard");
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      
+      return () => clearInterval(countdownTimer);
     }
   }, [session, router]);
 
@@ -79,6 +91,18 @@ export default function Home() {
             className="text-sm text-blue-600 hover:underline"
           >
             Sign in with different Google account
+          </button>
+        </div>
+        <div className="text-center">
+          <p className="text-sm text-gray-500">
+            Redirecting to dashboard in {countdown} seconds...
+          </p>
+          <button
+            type="button"
+            onClick={() => router.push("/dashboard")}
+            className="text-sm text-green-600 hover:underline"
+          >
+            Go to dashboard now
           </button>
         </div>
       </main>
