@@ -117,6 +117,8 @@ export const {
     async createUser({ user }) {
       // Grant exactly 5 credits once on account creation. Guard against
       // double‑grants by checking if the user already has any credits.
+      if (!user.id) return; // Guard against undefined user ID
+      
       await prisma.$transaction(async (tx) => {
         const existing = await tx.user.findUnique({
           where: { id: user.id },
