@@ -53,6 +53,7 @@ export default function DashboardPage() {
     try {
       const res = await fetch('/api/generate', {
         method: 'POST',
+        credentials: 'include',           // <— belangrijk
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt, styleId }),
       });

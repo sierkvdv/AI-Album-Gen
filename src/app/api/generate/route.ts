@@ -6,6 +6,9 @@ import { generateAlbumCover } from '@/lib/ai';
 import { stylePresets } from '@/lib/stylePresets';
 import { LedgerType } from '@prisma/client';
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user || !(session.user as any).id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
