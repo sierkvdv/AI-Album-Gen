@@ -45,5 +45,7 @@ export const {
     signIn: "/",
     error: "/",
   },
+  // Force the correct URL for production
+  url: process.env.NODE_ENV === "production" ? "https://ai-album-gen.vercel.app" : undefined,
   // Force new deployment to clear Vercel cache
 });
