@@ -50,34 +50,34 @@ const providers: any[] = [
   }),
 ];
 
-// Enable the Credentials provider only when not in production.
-if (process.env.NODE_ENV !== "production") {
-  providers.push(
-    CredentialsProvider({
-      id: "password",
-      name: "Password",
-      credentials: {
-        password: { label: "Password", type: "password" },
-      },
-      async authorize(credentials) {
-        const provided = credentials?.password ?? "";
-        // Require the TEST_PASSWORD env in development; fail otherwise.
-        if (!process.env.TEST_PASSWORD || provided !== process.env.TEST_PASSWORD) {
-          return null;
-        }
-        const email = "dev@test.com";
-        // Find or create a dummy user record. Do not grant credits here; the
-        // createUser event will handle credit assignment.
-        const user = await prisma.user.upsert({
-          where: { email },
-          update: {},
-          create: { email, name: "Dev Tester" },
-        });
-        return { id: user.id, email: user.email, name: user.name };
-      },
-    })
-  );
-}
+// Temporarily disable Credentials provider to isolate the issue
+// if (process.env.NODE_ENV !== "production") {
+//   providers.push(
+//     CredentialsProvider({
+//       id: "password",
+//       name: "Password",
+//       credentials: {
+//         password: { label: "Password", type: "password" },
+//       },
+//       async authorize(credentials) {
+//         const provided = credentials?.password ?? "";
+//         // Require the TEST_PASSWORD env in development; fail otherwise.
+//         if (!process.env.TEST_PASSWORD || provided !== process.env.TEST_PASSWORD) {
+//           return null;
+//         }
+//         const email = "dev@test.com";
+//         // Find or create a dummy user record. Do not grant credits here; the
+//         // createUser event will handle credit assignment.
+//         const user = await prisma.user.upsert({
+//           where: { email },
+//           update: {},
+//           create: { email, name: "Dev Tester" },
+//         });
+//         return { id: user.id, email: user.email, name: user.name };
+//       },
+//     })
+//   );
+// }
 
 export const {
   handlers,
@@ -85,7 +85,8 @@ export const {
   signIn,
   signOut,
 } = NextAuth({
-  adapter: PrismaAdapter(prisma),
+  // Temporarily disable adapter to isolate the issue
+  // adapter: PrismaAdapter(prisma),
   secret: AUTH_SECRET,
   session: {
     strategy: "jwt",
@@ -97,21 +98,9 @@ export const {
       // When a user logs in, persist additional fields on the token.
       if (user) {
         token.id = user.id;
-        // Look up credits and admin flag from the database.  Keep this logic in
-        // the JWT callback so that the session remains in sync when credits are
-        // updated.
-        try {
-          const dbUser = await prisma.user.findUnique({
-            where: { id: user.id as string },
-            select: { credits: true, isAdmin: true },
-          });
-          token.credits = dbUser?.credits ?? 0;
-          token.isAdmin = dbUser?.isAdmin ?? false;
-        } catch (error) {
-          console.error('Error fetching user data in JWT callback:', error);
-          token.credits = 0;
-          token.isAdmin = false;
-        }
+        // For now, set default values without database lookup
+        token.credits = 5;
+        token.isAdmin = false;
       }
       return token;
     },
@@ -124,41 +113,42 @@ export const {
       return session;
     },
   },
-  events: {
-    async createUser({ user }) {
-      // Grant exactly 5 credits once on account creation. Guard against
-      // double‑grants by checking if the user already has any credits.
-      if (!user.id) {
-        console.error('createUser event: user.id is undefined');
-        return;
-      }
+  // Temporarily disable events to isolate the issue
+  // events: {
+  //   async createUser({ user }) {
+  //     // Grant exactly 5 credits once on account creation. Guard against
+  //     // double‑grants by checking if the user already has any credits.
+  //     if (!user.id) {
+  //       console.error('createUser event: user.id is undefined');
+  //       return;
+  //     }
       
-      const userId = user.id;
-      try {
-        await prisma.$transaction(async (tx) => {
-          const existing = await tx.user.findUnique({
-            where: { id: userId },
-            select: { credits: true },
-          });
-          if (!existing || existing.credits > 0) return;
-          await tx.user.update({
-            where: { id: userId },
-            data: { credits: 5 },
-          });
-          await tx.creditLedger.create({
-            data: {
-              userId,
-              type: LedgerType.GRANT,
-              amount: 5,
-              reference: "first_login_bonus",
-            },
-          });
-        });
-      } catch (error) {
-        console.error('Error in createUser event:', error);
-      }
-    },
-  },
+  //     const userId = user.id;
+  //     try {
+  //       await prisma.$transaction(async (tx) => {
+  //         const existing = await tx.user.findUnique({
+  //           where: { id: userId },
+  //           select: { credits: true },
+  //         });
+  //         if (!existing || existing.credits > 0) return;
+  //         await tx.user.update({
+  //           where: { id: userId },
+  //           data: { credits: 5 },
+  //         });
+  //         await tx.creditLedger.create({
+  //           data: {
+  //             userId,
+  //             type: LedgerType.GRANT,
+  //             amount: 5,
+  //             reference: "first_login_bonus",
+  //           },
+  //         });
+  //       });
+  //     } catch (error) {
+  //       console.error('Error in createUser event:', error);
+  //     }
+  //   },
+  // },
   pages: {
     // Redirect unknown sign‑ins to the home page.
     signIn: "/",
