@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
 
     // Generate new image URL
     const styleDescriptor = `${generation.style}`;
-    const newImageUrl = await generateAlbumCover(generation.prompt, styleDescriptor);
+    const newImageUrl = await generateAlbumCover(generation.prompt, styleDescriptor, user.id);
 
     // Update the generation with new image URL and decrement credits
     await db.$transaction(async (tx) => {

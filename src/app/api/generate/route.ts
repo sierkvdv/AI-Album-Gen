@@ -45,7 +45,7 @@ export async function POST(request: Request) {
 
   // Generate the image using the AI helper.  In dev, this returns a placeholder.
   const styleDescriptor = `${preset.genre}, ${preset.mood}, ${preset.colour}`;
-  const imageUrl = await generateAlbumCover(prompt, styleDescriptor);
+  const imageUrl = await generateAlbumCover(prompt, styleDescriptor, userId);
 
   // Persist the generation and decrement the user's credits in a transaction.
   await db.$transaction(async (tx) => {
