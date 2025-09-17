@@ -12,8 +12,7 @@ export default function Home() {
     setIsLoading(true);
     try {
       await signIn('google', { 
-        callbackUrl: '/dashboard',
-        redirect: true // Force redirect
+        callbackUrl: '/dashboard'
       });
     } catch (error) {
       console.error('Sign in error:', error);
