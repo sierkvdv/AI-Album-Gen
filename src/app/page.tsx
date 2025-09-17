@@ -38,8 +38,8 @@ export default function Home() {
   }, [session, router]);
 
   const handleSignIn = async () => {
-    // Force account selection by adding prompt=select_account
-    window.location.href = "/api/auth/signin/google?prompt=select_account";
+    // Use NextAuth signIn which will now force account selection
+    await signIn("google", { callbackUrl: "/" });
   };
 
   const handleSignOut = async () => {
@@ -90,7 +90,23 @@ export default function Home() {
             onClick={handleSignIn}
             className="text-sm text-blue-600 hover:underline"
           >
-            Sign in with different Google account
+            Switch to different Google account
+          </button>
+          <p className="text-xs text-gray-400 mt-1">
+            This will log you out and show the account selector
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              // Alternative method: direct Google logout then sign in
+              window.open('https://accounts.google.com/logout', '_blank');
+              setTimeout(() => {
+                signIn("google", { callbackUrl: "/" });
+              }, 1000);
+            }}
+            className="text-xs text-orange-600 hover:underline mt-1 block"
+          >
+            Alternative: Force Google logout first
           </button>
         </div>
         <div className="text-center">
