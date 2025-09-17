@@ -1,66 +1,72 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
-import { generateAlbumCover } from '@/lib/ai';
-import { stylePresets } from '@/lib/stylePresets';
-import { LedgerType } from '@prisma/client';
+import { NextResponse } from "next/server";
+import { auth } from "@/auth";
+import { prisma } from "@/lib/prisma";
+import { generateAlbumCover } from "@/lib/ai";
+import { LedgerType } from "@prisma/client";
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
-
-export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user || !(session.user as any).id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  const userId = (session.user as any).id as string;
-  const { prompt, styleId } = await req.json();
-  if (!prompt || !styleId) return NextResponse.json({ error: 'Missing prompt or style' }, { status: 400 });
-
-  const preset = stylePresets.find((p) => p.id === styleId);
-  if (!preset) return NextResponse.json({ error: 'Invalid style preset' }, { status: 400 });
-
-  const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user || user.credits <= 0) return NextResponse.json({ error: 'Insufficient credits' }, { status: 403 });
-
-  try {
-    console.log('Starting image generation for user:', userId);
-    console.log('Prompt:', prompt);
-    console.log('Style preset:', preset);
-    
-    const styleDescriptor = `${preset.genre}, ${preset.mood}, ${preset.colour}`;
-    console.log('Style descriptor:', styleDescriptor);
-    
-    const imageUrl = await generateAlbumCover(prompt, styleDescriptor);
-    console.log('Generated image URL:', imageUrl);
-
-    const generation = await prisma.$transaction(async (tx) => {
-      const gen = await tx.generation.create({
-        data: { userId, prompt, style: preset.name, imageUrl },
-      });
-      await tx.user.update({ where: { id: userId }, data: { credits: { decrement: 1 } } });
-      await tx.creditLedger.create({
-        data: {
-          userId,
-          type: LedgerType.USE,
-          amount: 1,
-          reference: gen.id,
-        },
-      });
-      return gen;
-    });
-
-    console.log('Generation saved successfully:', generation.id);
-    return NextResponse.json({ generation });
-  } catch (err) {
-    console.error('Generate error details:', {
-      error: err,
-      message: err instanceof Error ? err.message : 'Unknown error',
-      stack: err instanceof Error ? err.stack : undefined
-    });
-    return NextResponse.json({ 
-      error: 'Failed to generate image', 
-      details: err instanceof Error ? err.message : 'Unknown error'
-    }, { status: 500 });
+/**
+ * POST /api/generate
+ *
+ * Protected route to generate an AI album cover.  Requires a valid
+ * authentication session and at least one credit.  Expects a JSON body
+ * containing { prompt: string, styleId: string }.  Decrements credits
+ * when a generation is successful.  Returns 401 when unauthenticated,
+ * 403 when out of credits and 400 for invalid input.
+ */
+export async function POST(request: Request) {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
+
+  const { prompt, styleId } = await request.json();
+  if (!prompt || typeof prompt !== "string" || !styleId || typeof styleId !== "string") {
+    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+  }
+
+  // Fetch the style descriptor from some data source.  In this example
+  // we assume style presets are defined in a static JSON file.
+  const stylePresets = require("@/app/styles.json");
+  const preset = stylePresets.find((p: any) => p.id === styleId);
+  if (!preset) {
+    return NextResponse.json({ error: "Invalid style preset" }, { status: 400 });
+  }
+
+  // Check if the user has enough credits.
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { credits: true },
+  });
+  if (!user || user.credits <= 0) {
+    return NextResponse.json({ error: "Out of credits" }, { status: 403 });
+  }
+
+  // Generate the image using the AI helper.  In dev, this returns a placeholder.
+  const imageUrl = await generateAlbumCover(prompt, preset.descriptor);
+
+  // Persist the generation and decrement the user's credits in a transaction.
+  await prisma.$transaction(async (tx) => {
+    await tx.generation.create({
+      data: {
+        userId: session.user.id,
+        prompt,
+        styleId,
+        imageUrl,
+      },
+    });
+    await tx.user.update({
+      where: { id: session.user.id },
+      data: { credits: { decrement: 1 } },
+    });
+    await tx.creditLedger.create({
+      data: {
+        userId: session.user.id,
+        type: LedgerType.DEBIT,
+        amount: 1,
+        reference: "generate",
+      },
+    });
+  });
+
+  return NextResponse.json({ imageUrl });
 }

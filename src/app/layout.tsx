@@ -1,27 +1,22 @@
-import './globals.css';
-import { Inter } from 'next/font/google';
-import Providers from '@/components/Providers';
-import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { ReactNode } from 'react';
+import "./globals.css";
+import { Inter } from "next/font/google";
+import Providers from "@/components/Providers";
+import type { ReactNode } from "react";
 
-const inter = Inter({ subsets: ['latin'] });
+const inter = Inter({ subsets: ["latin"] });
 
 /**
- * Root layout for the application. Wraps all pages with the
- * SessionProvider so that authentication state can be accessed
- * throughout the component tree. Applies a simple font family and
- * sets up the HTML structure.
+ * Root layout for the application.
+ *
+ * Applies a global font and wraps all pages in the SessionProvider via
+ * the Providers component.  This component is rendered once and persists
+ * between page navigations.
  */
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
-      <head>
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-      </head>
-      <body className={inter.className + ' bg-gray-50 text-gray-900 min-h-screen'}>
-        <ErrorBoundary>
-          <Providers>{children}</Providers>
-        </ErrorBoundary>
+    <html lang="en" className={inter.className}>
+      <body>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
