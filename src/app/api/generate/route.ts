@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from "@/lib/prisma";
 import { generateAlbumCover } from "@/lib/ai";
 import { LedgerType } from "@prisma/client";
@@ -14,7 +15,7 @@ import { LedgerType } from "@prisma/client";
  * 403 when out of credits and 400 for invalid input.
  */
 export async function POST(request: Request) {
-  const session = await auth();
+  const session = await getServerSession(authOptions);
   if (!session?.user || !session.user.id) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }

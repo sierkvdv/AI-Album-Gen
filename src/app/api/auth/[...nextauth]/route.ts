@@ -9,7 +9,7 @@ if (process.env.NODE_ENV === "production") {
   process.env.VERCEL_URL = "ai-album-gen.vercel.app";
 }
 
-const authOptions = {
+export const authOptions = {
   secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
   providers: [
     GoogleProvider({
