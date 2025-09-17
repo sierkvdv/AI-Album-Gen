@@ -11,13 +11,10 @@ export const authOptions: NextAuthOptions = {
   session: { strategy: 'database', maxAge: 30 * 24 * 60 * 60 },
 
   providers: [
-    // (Zet EmailProvider pas aan als je SMTP hebt)
-    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
-      ? [GoogleProvider({
-          clientId: process.env.GOOGLE_CLIENT_ID!,
-          clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-        })]
-      : []),
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    }),
   ],
 
   secret: process.env.NEXTAUTH_SECRET,
