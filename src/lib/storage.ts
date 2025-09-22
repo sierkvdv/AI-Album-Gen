@@ -24,7 +24,7 @@ export async function uploadImageToSupabase(
     
     // Upload the image to Supabase Storage
     const { data, error } = await supabase.storage
-      .from('images')
+      .from('ai-images')
       .upload(uniqueFileName, imageBuffer, {
         contentType: 'image/png',
         cacheControl: '3600',
@@ -37,7 +37,7 @@ export async function uploadImageToSupabase(
 
     // Get the public URL
     const { data: publicUrlData } = supabase.storage
-      .from('images')
+      .from('ai-images')
       .getPublicUrl(uniqueFileName);
 
     return publicUrlData.publicUrl;
