@@ -21,8 +21,13 @@ export async function generateAlbumCover(
   quality: 'standard' | 'hd' = 'standard'
 ): Promise<string> {
   // Use the mock image when testing or when OpenAI is not configured.
-  if (process.env.MOCK_OPENAI === "true" || !process.env.OPENAI_API_KEY) {
-    console.log('Using mock image - OpenAI not configured');
+  if (process.env.MOCK_OPENAI === "true") {
+    console.log('Using mock image - MOCK_OPENAI is true');
+    return "/placeholder_light_gray_block.png";
+  }
+  
+  if (!process.env.OPENAI_API_KEY) {
+    console.log('Using mock image - OpenAI API key not configured');
     return "/placeholder_light_gray_block.png";
   }
 
