@@ -17,7 +17,8 @@ export async function generateAlbumCover(
   style: string,
   userId?: string,
   width: number = 1024,
-  height: number = 1024
+  height: number = 1024,
+  quality: 'standard' | 'hd' = 'standard'
 ): Promise<string> {
   // Use the mock image when testing or when OpenAI is not configured.
   if (process.env.MOCK_OPENAI === "true" || !process.env.OPENAI_API_KEY) {
@@ -43,7 +44,7 @@ export async function generateAlbumCover(
         prompt: fullPrompt,
         n: 1,
         size: `${width}x${height}`,
-        quality: 'hd',
+        quality: quality,
         response_format: 'url'
       }),
     });

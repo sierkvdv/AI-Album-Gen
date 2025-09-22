@@ -60,7 +60,12 @@ export async function POST(request: Request) {
     // Generate the image using the AI helper with the selected aspect ratio
     console.log('Generate API: Generating image');
     const styleDescriptor = preset.styleDescriptor;
-    const imageUrl = await generateAlbumCover(prompt, styleDescriptor, userId, aspectRatio.width, aspectRatio.height);
+    
+    // Determine quality based on aspect ratio ID
+    const quality = aspectRatio.id.includes('_hd') ? 'hd' : 'standard';
+    console.log('Generate API: Using quality:', quality);
+    
+    const imageUrl = await generateAlbumCover(prompt, styleDescriptor, userId, aspectRatio.width, aspectRatio.height, quality);
     console.log('Generate API: Image generated:', imageUrl);
 
     // Persist the generation and decrement the user's credits in a transaction.
