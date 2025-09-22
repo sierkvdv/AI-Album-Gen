@@ -83,7 +83,7 @@ export default function DashboardPage() {
         setError(null);
         setSuccessMessage(null);
         try {
-          const res = await fetch('/api/generate', {
+          const res = await fetch('/api/debug-generate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ prompt, styleId, aspectRatioId }),
