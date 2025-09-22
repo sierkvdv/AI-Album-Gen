@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+<<<<<<< HEAD
     "target": "es2019",
     "module": "esnext",
     "lib": ["dom", "dom.iterable", "esnext"],
@@ -20,5 +21,27 @@
     }
   },
   "include": ["next-env.d.ts", "src/**/*", "playwright/tests/**/*"],
+=======
+    "target": "ES2020",
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noImplicitAny": false,
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["next-env.d.ts", "src/**/*", "prisma/**/*"],
+>>>>>>> 046ecbe6ce62922c21012150d250ea1a01b13417
   "exclude": ["node_modules"]
 }

@@ -20,7 +20,10 @@ model User {
   sessions       Session[]
   creditLedger   CreditLedger[]
   generations    Generation[]
+<<<<<<< HEAD
   projects       Project[]
+=======
+>>>>>>> 046ecbe6ce62922c21012150d250ea1a01b13417
   payments       Payment[]
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
@@ -82,7 +85,10 @@ model Generation {
   style       String
   imageUrl    String
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+<<<<<<< HEAD
   projects    Project[]
+=======
+>>>>>>> 046ecbe6ce62922c21012150d250ea1a01b13417
   createdAt   DateTime  @default(now())
 }
 
@@ -102,6 +108,7 @@ enum LedgerType {
   PURCHASE
   USE
 }
+<<<<<<< HEAD
 
 /// Project state for the image editor. Stores serialized crop, filter, and layer data.
 model Project {
@@ -132,3 +139,5 @@ model Project {
   /// Relationship to the Generation this project is derived from.
   generation    Generation  @relation(fields: [generationId], references: [id], onDelete: Cascade)
 }
+=======
+>>>>>>> 046ecbe6ce62922c21012150d250ea1a01b13417
