@@ -3,7 +3,6 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from "@/lib/prisma";
 import { generateAlbumCover } from "@/lib/ai";
-import { LedgerType } from "@prisma/client";
 
 /**
  * POST /api/generate
@@ -78,7 +77,7 @@ export async function POST(request: Request) {
     
     await db.$executeRaw`
       INSERT INTO "CreditLedger" ("id", "userId", "type", "amount", "reference", "createdAt")
-      VALUES (${`ledger_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`}, ${userId}, ${LedgerType.USE}, 1, 'generate', NOW())
+      VALUES (${`ledger_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`}, ${userId}, 'USE', 1, 'generate', NOW())
     `;
 
     console.log('Generate API: Success');
