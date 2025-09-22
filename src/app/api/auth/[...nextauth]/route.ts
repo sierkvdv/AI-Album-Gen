@@ -38,12 +38,29 @@ export const authOptions = {
     async jwt({ token, user }: any) {
       if (user) {
         (token as any).id = user.id;
+        // Store user data in token for session callback
+        (token as any).email = user.email;
       }
       return token;
     },
     async session({ session, token }: any) {
       if (session?.user && token) {
         (session.user as any).id = (token as any).id;
+        // Fetch fresh user data from database to get updated credits
+        try {
+          const { prisma } = await import('@/lib/prisma');
+          const db = prisma();
+          const user = await db.user.findUnique({
+            where: { email: (token as any).email || session.user.email! },
+            select: { credits: true, isAdmin: true }
+          });
+          if (user) {
+            (session.user as any).credits = user.credits;
+            (session.user as any).isAdmin = user.isAdmin;
+          }
+        } catch (error) {
+          console.error('Error fetching user data in session:', error);
+        }
       }
       return session;
     },

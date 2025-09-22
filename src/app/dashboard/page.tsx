@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useSession, signOut } from 'next-auth/react';
+import { useSession, signOut, getSession } from 'next-auth/react';
 import { stylePresets } from '@/lib/stylePresets';
 import { aspectRatios } from '@/lib/aspectRatios';
 import { loadStripe } from '@stripe/stripe-js';
@@ -41,29 +41,31 @@ export default function DashboardPage() {
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [creditsToBuy, setCreditsToBuy] = useState(5);
 
-  // Fetch user info and existing generations on mount
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const sessRes = await fetch('/api/user');
-        const sess = await sessRes.json();
-        if (!sessRes.ok || !sess?.user) {
-          // Only redirect if it's a 401 (unauthorized), not a 500 (server error)
-          if (sessRes.status === 401) {
-            router.push('/');
-            return;
-          }
-          // For other errors, show error message but don't redirect
-          setError('Unable to load user data. Please try refreshing the page.');
+  // Fetch user info and existing generations
+  const fetchData = async () => {
+    try {
+      const sessRes = await fetch('/api/user');
+      const sess = await sessRes.json();
+      if (!sessRes.ok || !sess?.user) {
+        // Only redirect if it's a 401 (unauthorized), not a 500 (server error)
+        if (sessRes.status === 401) {
+          router.push('/');
           return;
         }
-        const gensRes = await fetch('/api/user/generations');
-        const gens = await gensRes.json();
-        setGenerations(gens.generations || []);
-      } catch (err) {
-        setError('Failed to load data. Please try refreshing the page.');
+        // For other errors, show error message but don't redirect
+        setError('Unable to load user data. Please try refreshing the page.');
+        return;
       }
+      const gensRes = await fetch('/api/user/generations');
+      const gens = await gensRes.json();
+      setGenerations(gens.generations || []);
+    } catch (err) {
+      setError('Failed to load data. Please try refreshing the page.');
     }
+  };
+
+  // Fetch data on mount
+  useEffect(() => {
     fetchData();
   }, [router]);
 
@@ -152,6 +154,29 @@ export default function DashboardPage() {
     await signOut({ callbackUrl: '/' });
   }
 
+  // Add credits function for testing
+  const addCredits = async (amount: number) => {
+    try {
+      const res = await fetch('/api/add-credits', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSuccessMessage(data.message);
+        // Refresh user data to show updated credits
+        await fetchData();
+        // Force refresh the session to update credits display
+        window.location.reload();
+      } else {
+        setError(data.error || 'Failed to add credits');
+      }
+    } catch (err) {
+      setError('Failed to add credits');
+    }
+  };
+
   if (!session) {
     return (
       <div className="max-w-screen-lg mx-auto p-4">
@@ -169,8 +194,14 @@ export default function DashboardPage() {
         {session && (
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-600">
-              Credits: {(session.user as any)?.credits || 0}
+              Credits: {(session.user as any)?.credits ?? 0}
             </span>
+            <button
+              onClick={() => addCredits(5)}
+              className="px-3 py-1 text-sm bg-green-200 hover:bg-green-300 rounded mr-2"
+            >
+              +5 Credits (Test)
+            </button>
             <button
               onClick={handleSignOut}
               className="px-3 py-1 text-sm bg-gray-200 hover:bg-gray-300 rounded"
@@ -247,7 +278,7 @@ export default function DashboardPage() {
           </div>
           <button
             type="submit"
-            disabled={loading || ((session.user as any)?.credits || 0) < 1}
+                disabled={loading || ((session.user as any)?.credits ?? 0) < 1}
             className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
             {loading ? 'Generating...' : 'Generate Image (1 Credit)'}
