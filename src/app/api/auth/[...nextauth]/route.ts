@@ -1,13 +1,9 @@
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 
-<<<<<<< HEAD
 // Force the correct production URL. When deploying to Vercel the env
 // variables NEXTAUTH_URL and VERCEL_URL may be set automatically but are
 // immutable. Reassign them here to ensure Auth.js uses the canonical host.
-=======
-// Force the correct production URL
->>>>>>> 046ecbe6ce62922c21012150d250ea1a01b13417
 if (process.env.NODE_ENV === "production") {
   delete process.env.NEXTAUTH_URL;
   delete process.env.VERCEL_URL;
@@ -15,12 +11,9 @@ if (process.env.NODE_ENV === "production") {
   process.env.VERCEL_URL = "ai-album-gen.vercel.app";
 }
 
-<<<<<<< HEAD
 // Exported Auth.js configuration. In development credentials may be
 // incomplete but the providers must still be defined. Additional providers
 // (e.g. GitHub) can be added here if needed.
-=======
->>>>>>> 046ecbe6ce62922c21012150d250ea1a01b13417
 export const authOptions = {
   secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
   providers: [
@@ -32,15 +25,9 @@ export const authOptions = {
           prompt: "select_account",
           access_type: "offline",
           response_type: "code",
-<<<<<<< HEAD
           scope: "openid email profile",
         },
       },
-=======
-          scope: "openid email profile"
-        }
-      }
->>>>>>> 046ecbe6ce62922c21012150d250ea1a01b13417
     }),
   ],
   session: {
@@ -48,7 +35,6 @@ export const authOptions = {
   },
   debug: true,
   callbacks: {
-<<<<<<< HEAD
     async jwt({ token, user }: any) {
       if (user) {
         (token as any).id = user.id;
@@ -62,21 +48,6 @@ export const authOptions = {
       return session;
     },
     async redirect({ url, baseUrl }: { url: string; baseUrl: string }) {
-=======
-    async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id;
-      }
-      return token;
-    },
-    async session({ session, token }) {
-      if (session?.user && token) {
-        (session.user as any).id = token.id;
-      }
-      return session;
-    },
-    async redirect({ url, baseUrl }) {
->>>>>>> 046ecbe6ce62922c21012150d250ea1a01b13417
       // Always redirect to dashboard after login
       if (url.startsWith("/")) return `${baseUrl}/dashboard`;
       else if (new URL(url).origin === baseUrl) return `${baseUrl}/dashboard`;

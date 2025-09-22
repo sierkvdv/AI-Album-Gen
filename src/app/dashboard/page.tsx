@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-<<<<<<< HEAD
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
@@ -11,14 +10,6 @@ import { loadStripe } from '@stripe/stripe-js';
 /**
  * Shape of a generation returned from the API.
  */
-=======
-import { useSession, signOut } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { stylePresets } from '@/lib/stylePresets';
-import { loadStripe } from '@stripe/stripe-js';
-
-// Type for generation objects returned from the API
->>>>>>> 046ecbe6ce62922c21012150d250ea1a01b13417
 interface Generation {
   id: string;
   prompt: string;
@@ -27,7 +18,6 @@ interface Generation {
   createdAt: string;
 }
 
-<<<<<<< HEAD
 /**
  * Dashboard page. Displays the user's current credits, allows them to
  * generate new covers, purchase additional credits and browse their
@@ -37,11 +27,6 @@ interface Generation {
 export default function DashboardPage() {
   const router = useRouter();
   const { data: session } = useSession();
-=======
-export default function DashboardPage() {
-  const router = useRouter();
-  const [session, setSession] = useState<any>(null);
->>>>>>> 046ecbe6ce62922c21012150d250ea1a01b13417
   const [prompt, setPrompt] = useState('');
   const [styleId, setStyleId] = useState(stylePresets[0]?.id ?? '');
   const [generations, setGenerations] = useState<Generation[]>([]);
