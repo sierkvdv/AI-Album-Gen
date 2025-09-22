@@ -140,7 +140,7 @@ export default function EditorPage({ params }: { params: { generationId: string 
         // Load the base image for preview
         const img2 = new Image();
         img2.crossOrigin = 'anonymous';
-        img2.src = proj.baseAssetUrl;
+        img2.src = proj!.baseAssetUrl;
         await img2.decode();
         if (!cancelled) {
           setProject(proj as ProjectState);
