@@ -83,7 +83,7 @@ export default function DashboardPage() {
         setError(null);
         setSuccessMessage(null);
         try {
-          const res = await fetch('/api/debug-generate', {
+          const res = await fetch('/api/generate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ prompt, styleId, aspectRatioId }),
@@ -91,10 +91,14 @@ export default function DashboardPage() {
       
       if (!res.ok) {
         const errorText = await res.text();
+        console.log('Generate API error response:', errorText);
         let errorMessage = 'Failed to generate image';
         try {
           const errorData = JSON.parse(errorText);
           errorMessage = errorData.error || errorMessage;
+          if (errorData.message) {
+            errorMessage += ` - ${errorData.message}`;
+          }
         } catch {
           errorMessage = errorText || errorMessage;
         }
@@ -102,6 +106,7 @@ export default function DashboardPage() {
       }
       
       const data = await res.json();
+      console.log('Generate API success response:', data);
       setSuccessMessage('Image generated successfully!');
       setPrompt('');
       // Refresh all data including generations and credits
