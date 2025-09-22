@@ -33,35 +33,22 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-<<<<<<< HEAD
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [creditsToBuy, setCreditsToBuy] = useState(5);
 
   // Fetch user info and existing generations on mount
-=======
-
-  const [checkoutLoading, setCheckoutLoading] = useState(false);
-  const [creditsToBuy, setCreditsToBuy] = useState(5);
-
-  // Fetch session and generations on mount
->>>>>>> 046ecbe6ce62922c21012150d250ea1a01b13417
   useEffect(() => {
     async function fetchData() {
       try {
         const sessRes = await fetch('/api/user');
         const sess = await sessRes.json();
-<<<<<<< HEAD
-        if (!sessRes.ok || !sess?.user) {
-=======
-        
         if (!sessRes.ok || !sess?.user) {
           // Only redirect if it's a 401 (unauthorized), not a 500 (server error)
->>>>>>> 046ecbe6ce62922c21012150d250ea1a01b13417
           if (sessRes.status === 401) {
             router.push('/');
             return;
           }
-<<<<<<< HEAD
+          // For other errors, show error message but don't redirect
           setError('Unable to load user data. Please try refreshing the page.');
           return;
         }
@@ -69,28 +56,13 @@ export default function DashboardPage() {
         const gens = await gensRes.json();
         setGenerations(gens.generations || []);
       } catch (err) {
-=======
-          // For other errors, show error message but don't redirect
-          setError('Unable to load user data. Please try refreshing the page.');
-          return;
-        }
-        
-        setSession(sess);
-        const res = await fetch('/api/user/generations');
-        const data = await res.json();
-        setGenerations(data.generations || []);
-      } catch (error) {
->>>>>>> 046ecbe6ce62922c21012150d250ea1a01b13417
         setError('Failed to load data. Please try refreshing the page.');
       }
     }
     fetchData();
   }, [router]);
 
-<<<<<<< HEAD
   // Generate a new cover using the AI endpoint
-=======
->>>>>>> 046ecbe6ce62922c21012150d250ea1a01b13417
   async function handleGenerate(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
@@ -99,28 +71,27 @@ export default function DashboardPage() {
     try {
       const res = await fetch('/api/generate', {
         method: 'POST',
-        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt, styleId }),
       });
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to generate image');
+        throw new Error(data.error || 'Failed to generate cover');
       }
-      setGenerations((prev) => [data.generation, ...prev]);
-      setSuccessMessage('Image generated successfully!');
+      setSuccessMessage('Cover generated successfully!');
       setPrompt('');
-    } catch (err: any) {
-      setError(err.message);
+      // Refresh generations list
+      const gensRes = await fetch('/api/user/generations');
+      const gens = await gensRes.json();
+      setGenerations(gens.generations || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to generate cover');
     } finally {
       setLoading(false);
     }
   }
 
-<<<<<<< HEAD
   // Begin Stripe checkout for purchasing credits
-=======
->>>>>>> 046ecbe6ce62922c21012150d250ea1a01b13417
   async function handleBuyCredits(e: React.FormEvent) {
     e.preventDefault();
     setCheckoutLoading(true);
@@ -133,61 +104,57 @@ export default function DashboardPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || 'Unable to start checkout');
+        throw new Error(data.error || 'Failed to create checkout session');
       }
-      const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? '');
-      if (!stripe) throw new Error('Stripe not loaded');
-      await stripe.redirectToCheckout({ sessionId: data.sessionId });
-    } catch (err: any) {
-      setError(err.message);
+      const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+      if (stripe) {
+        await stripe.redirectToCheckout({ sessionId: data.sessionId });
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to start checkout');
     } finally {
       setCheckoutLoading(false);
     }
   }
 
-<<<<<<< HEAD
   // Download a generation via the proxy API. Uses a temporary signed URL that
   // expires after a short period. Displays an alert if the URL is invalid.
   async function downloadGeneration(id: string) {
     try {
-      const response = await fetch(`/api/image/${id}`);
-      if (!response.ok) {
-        throw new Error('Image expired or unavailable');
+      const res = await fetch(`/api/image/${id}`);
+      if (!res.ok) {
+        throw new Error('Failed to get download URL');
       }
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `album-cover-${id}.png`;
-      a.click();
-      window.URL.revokeObjectURL(url);
+      const data = await res.json();
+      const link = document.createElement('a');
+      link.href = data.url;
+      link.download = `album-cover-${id}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     } catch (err) {
-      alert('This image is no longer available for download. The URL has expired. Use the Regenerate button to get a fresh image.');
+      alert('Download failed. The image may have expired. Please try regenerating it.');
     }
   }
 
-  // Regenerate an image, consuming a credit. On success refresh the list.
-  async function regenerate(id: string) {
-    if (!confirm('Regenerate this image? This will use 1 credit and create a new image URL.')) return;
-    try {
-      const response = await fetch('/api/regenerate-image', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ generationId: id }),
-      });
-      if (response.ok) {
-        alert('Image regenerated successfully! Refreshing…');
-        // Re-fetch generations
-        const gensRes = await fetch('/api/user/generations');
-        const gens = await gensRes.json();
-        setGenerations(gens.generations || []);
-      } else {
-        const error = await response.json();
-        alert(`Failed to regenerate: ${error.message || 'Unknown error'}`);
-      }
-    } catch (err) {
-      alert('Failed to regenerate image. Please try again.');
-    }
+  // Redirect to editor for a specific generation
+  function editGeneration(id: string) {
+    router.push(`/editor/${id}`);
+  }
+
+  // Sign out and redirect to home
+  async function handleSignOut() {
+    await signOut({ callbackUrl: '/' });
+  }
+
+  if (!session) {
+    return (
+      <div className="max-w-screen-lg mx-auto p-4">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">Loading...</h1>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -195,269 +162,143 @@ export default function DashboardPage() {
       <div className="flex justify-between items-center">
         <h1 className="text-xl font-bold">Dashboard</h1>
         {session && (
-          <div className="flex items-center space-x-4">
-            <span>Credits: {(session.user as any)?.credits}</span>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-gray-600">
+              Credits: {session.user?.credits || 0}
+            </span>
             <button
-              onClick={() => signOut({ callbackUrl: '/' })}
-              className="text-sm text-red-600 hover:underline"
+              onClick={handleSignOut}
+              className="px-3 py-1 text-sm bg-gray-200 hover:bg-gray-300 rounded"
             >
-              Sign out
+              Sign Out
             </button>
           </div>
         )}
       </div>
-      {/* Purchase credits */}
-      <form onSubmit={handleBuyCredits} className="mt-4 space-y-2 border p-4 rounded">
-        <h2 className="font-medium">Buy Credits</h2>
-        <input
-          type="number"
-          min={1}
-          value={creditsToBuy}
-          onChange={(e) => setCreditsToBuy(parseInt(e.target.value, 10))}
-          className="w-full border rounded p-2"
-        />
-        <button
-          type="submit"
-          disabled={checkoutLoading}
-          className="px-3 py-1 bg-blue-600 text-white rounded"
-        >
-          {checkoutLoading ? 'Processing…' : 'Buy'}
-        </button>
-      </form>
-      {/* Generate new cover */}
-      <form onSubmit={handleGenerate} className="mt-4 space-y-2 border p-4 rounded">
-        <h2 className="font-medium">Generate Album Cover</h2>
-        <input
-          type="text"
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          className="w-full border rounded p-2"
-          placeholder="Describe your album cover…"
-          required
-        />
-        <select
-          value={styleId}
-          onChange={(e) => setStyleId(e.target.value)}
-          className="w-full border rounded p-2"
-        >
-          {stylePresets.map((preset) => (
-            <option key={preset.id} value={preset.id}>
-              {preset.name}
-            </option>
-          ))}
-        </select>
-        <button
-          type="submit"
-          disabled={loading}
-          className="px-3 py-1 bg-green-600 text-white rounded"
-        >
-          {loading ? 'Generating…' : 'Generate'}
-=======
-  return (
-    <div className="p-6 max-w-4xl mx-auto space-y-6">
-      <h1 className="text-3xl font-semibold">Dashboard</h1>
-      {session && (
-        <div className="flex items-center justify-between">
-          <p>
-            <strong>Credits:</strong> {(session.user as any)?.credits}
-          </p>
-          <button
-            onClick={() => signOut({ callbackUrl: "/" })}
-            className="text-sm text-red-600 hover:underline"
-          >
-            Sign out
-          </button>
+
+      {error && (
+        <div className="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+          {error}
         </div>
       )}
 
-      {/* Purchase credits */}
-      <form onSubmit={handleBuyCredits} className="flex items-end space-x-2 bg-white p-4 rounded shadow">
-        <div className="flex-1">
-          <label className="block text-sm font-medium mb-1" htmlFor="credits">
-            Buy Credits
-          </label>
-          <input
-            type="number"
-            id="credits"
-            min={1}
-            value={creditsToBuy}
-            onChange={(e) => setCreditsToBuy(parseInt(e.target.value, 10))}
-            className="w-full border rounded p-2"
-          />
+      {successMessage && (
+        <div className="mt-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded">
+          {successMessage}
         </div>
-        <button
-          type="submit"
-          disabled={checkoutLoading}
-          className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 disabled:opacity-50"
-        >
-          {checkoutLoading ? 'Processing...' : 'Buy'}
-        </button>
-      </form>
-      <form onSubmit={handleGenerate} className="space-y-4 bg-white p-4 rounded shadow">
-        <div>
-          <label className="block text-sm font-medium mb-1" htmlFor="prompt">
-            Prompt
-          </label>
-          <textarea
-            id="prompt"
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            className="w-full border rounded p-2"
-            placeholder="Describe your album cover..."
-            required
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1" htmlFor="style">
-            Style preset
-          </label>
-          <select
-            id="style"
-            value={styleId}
-            onChange={(e) => setStyleId(e.target.value)}
-            className="w-full border rounded p-2"
+      )}
+
+      {/* Generation Form */}
+      <div className="mt-6 p-6 bg-white border rounded-lg">
+        <h2 className="text-lg font-semibold mb-4">Generate New Cover</h2>
+        <form onSubmit={handleGenerate} className="space-y-4">
+          <div>
+            <label htmlFor="prompt" className="block text-sm font-medium text-gray-700">
+              Describe your album cover
+            </label>
+            <input
+              type="text"
+              id="prompt"
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              placeholder="e.g., A futuristic cityscape at sunset with neon lights"
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              required
+            />
+          </div>
+          <div>
+            <label htmlFor="style" className="block text-sm font-medium text-gray-700">
+              Style
+            </label>
+            <select
+              id="style"
+              value={styleId}
+              onChange={(e) => setStyleId(e.target.value)}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            >
+              {stylePresets.map((style) => (
+                <option key={style.id} value={style.id}>
+                  {style.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button
+            type="submit"
+            disabled={loading || (session.user?.credits || 0) < 1}
+            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
-            {stylePresets.map((preset) => (
-              <option key={preset.id} value={preset.id}>
-                {preset.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <button
-          type="submit"
-          disabled={loading}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
-        >
-          {loading ? 'Generating...' : 'Generate'}
->>>>>>> 046ecbe6ce62922c21012150d250ea1a01b13417
-        </button>
-        {error && <p className="text-red-600 text-sm">{error}</p>}
-        {successMessage && <p className="text-green-600 text-sm">{successMessage}</p>}
-      </form>
-<<<<<<< HEAD
-      {/* Generation history */}
-      {generations.length > 0 && (
-        <div className="mt-6">
-          <h2 className="font-medium mb-2">Your Generations</h2>
-          <ul className="space-y-4">
+            {loading ? 'Generating...' : 'Generate Cover (1 Credit)'}
+          </button>
+        </form>
+      </div>
+
+      {/* Purchase Credits */}
+      <div className="mt-6 p-6 bg-white border rounded-lg">
+        <h2 className="text-lg font-semibold mb-4">Purchase Credits</h2>
+        <form onSubmit={handleBuyCredits} className="space-y-4">
+          <div>
+            <label htmlFor="credits" className="block text-sm font-medium text-gray-700">
+              Number of credits
+            </label>
+            <select
+              id="credits"
+              value={creditsToBuy}
+              onChange={(e) => setCreditsToBuy(Number(e.target.value))}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value={5}>5 credits - $5.00</option>
+              <option value={10}>10 credits - $10.00</option>
+              <option value={25}>25 credits - $25.00</option>
+            </select>
+          </div>
+          <button
+            type="submit"
+            disabled={checkoutLoading}
+            className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
+          >
+            {checkoutLoading ? 'Processing...' : 'Buy Credits'}
+          </button>
+        </form>
+      </div>
+
+      {/* Generations History */}
+      <div className="mt-6">
+        <h2 className="text-lg font-semibold mb-4">Your Generations</h2>
+        {generations.length === 0 ? (
+          <p className="text-gray-500">No generations yet. Create your first cover above!</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {generations.map((gen) => (
-              <li key={gen.id} className="border p-4 rounded">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-semibold">{gen.prompt}</h3>
-                    <p className="text-sm text-gray-600">Style: {gen.style}</p>
-                    <p className="text-xs text-gray-500">{new Date(gen.createdAt).toLocaleString()}</p>
-                  </div>
-                  <div className="flex flex-col items-end space-y-1">
-                    <button
-                      onClick={() => downloadGeneration(gen.id)}
-                      className="px-2 py-1 bg-blue-600 text-white text-sm rounded"
-                    >
-                      Download
-                    </button>
-                    <button
-                      onClick={() => regenerate(gen.id)}
-                      className="px-2 py-1 bg-yellow-600 text-white text-sm rounded"
-                    >
-                      Regenerate
-                    </button>
-                    <Link
-                      href={`/editor/${gen.id}`}
-                      className="px-2 py-1 bg-purple-600 text-white text-sm rounded text-center"
-                    >
-                      Edit
-                    </Link>
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
-=======
-      {generations.length > 0 && (
-        <div>
-          <h2 className="text-2xl font-semibold mb-4">Your Generations</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {generations.map((gen) => (
-              <div key={gen.id} className="bg-white p-2 rounded shadow">
-                <div className="relative aspect-square bg-gray-100 rounded overflow-hidden">
-                  <img
-                    src={`/api/image/${gen.id}`}
-                    alt={gen.prompt}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div className="mt-2 text-sm">
-                  <p className="font-medium">{gen.prompt}</p>
-                  <p className="text-gray-500">{gen.style}</p>
-                  <p className="text-gray-400">
-                    {new Date(gen.createdAt).toLocaleString()}
-                  </p>
-                  <div className="flex gap-2 mt-1">
-                    <a
-                      href={`/api/image/${gen.id}`}
-                      download={`album-cover-${gen.id}.png`}
-                      className="text-blue-600 hover:underline text-xs"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        // Try to download via proxy, show alert if expired
-                        fetch(`/api/image/${gen.id}`)
-                          .then(response => {
-                            if (response.ok) {
-                              return response.blob();
-                            } else {
-                              throw new Error('Image expired or unavailable');
-                            }
-                          })
-                          .then(blob => {
-                            const url = window.URL.createObjectURL(blob);
-                            const a = document.createElement('a');
-                            a.href = url;
-                            a.download = `album-cover-${gen.id}.png`;
-                            a.click();
-                            window.URL.revokeObjectURL(url);
-                          })
-                          .catch(error => {
-                            alert('This image is no longer available for download. The URL has expired. Use the Regenerate button to get a fresh image.');
-                          });
-                      }}
-                    >
-                      Download
-                    </a>
-                    <button
-                      className="text-green-600 hover:underline text-xs"
-                      onClick={async () => {
-                        if (confirm('Regenerate this image? This will use 1 credit and create a new image URL.')) {
-                          try {
-                            const response = await fetch('/api/regenerate-image', {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ generationId: gen.id })
-                            });
-                            
-                            if (response.ok) {
-                              alert('Image regenerated successfully! Refresh the page to see the new image.');
-                              window.location.reload();
-                            } else {
-                              const error = await response.json();
-                              alert(`Failed to regenerate: ${error.message || 'Unknown error'}`);
-                            }
-                          } catch (error) {
-                            alert('Failed to regenerate image. Please try again.');
-                          }
-                        }
-                      }}
-                    >
-                      Regenerate
-                    </button>
-                  </div>
+              <div key={gen.id} className="bg-white border rounded-lg p-4">
+                <img
+                  src={gen.imageUrl}
+                  alt={gen.prompt}
+                  className="w-full h-48 object-cover rounded mb-3"
+                />
+                <h3 className="font-medium text-sm mb-2 line-clamp-2">{gen.prompt}</h3>
+                <p className="text-xs text-gray-500 mb-3">
+                  {new Date(gen.createdAt).toLocaleDateString()}
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => downloadGeneration(gen.id)}
+                    className="flex-1 bg-blue-600 text-white text-xs py-1 px-2 rounded hover:bg-blue-700"
+                  >
+                    Download
+                  </button>
+                  <button
+                    onClick={() => editGeneration(gen.id)}
+                    className="flex-1 bg-gray-600 text-white text-xs py-1 px-2 rounded hover:bg-gray-700"
+                  >
+                    Edit
+                  </button>
                 </div>
               </div>
             ))}
           </div>
->>>>>>> 046ecbe6ce62922c21012150d250ea1a01b13417
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
