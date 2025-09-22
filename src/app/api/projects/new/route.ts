@@ -43,8 +43,12 @@ export async function POST(request: NextRequest) {
         id: project.id,
         userId: session.user.id,
         generationId: generationId,
-        name: project.name || `Project ${generationId}`,
-        data: JSON.stringify(project)
+        baseAssetUrl: project.baseAssetUrl,
+        baseWidth: project.baseWidth,
+        baseHeight: project.baseHeight,
+        crop: project.crop,
+        filters: project.filters,
+        layers: project.layers
       }
     });
 
