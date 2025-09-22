@@ -37,16 +37,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid aspect ratio" }, { status: 400 });
   }
 
-  // Check if the user has enough credits.
-  const userId = session.user.id;
+  // Check if the user has enough credits by email (more reliable than session ID)
   const db = prisma();
   const user = await db.user.findUnique({
-    where: { id: userId },
-    select: { credits: true },
+    where: { email: session.user.email! },
+    select: { id: true, credits: true },
   });
   if (!user || user.credits <= 0) {
     return NextResponse.json({ error: "Out of credits" }, { status: 403 });
   }
+  const userId = user.id;
 
   // Generate the image using the AI helper.  In dev, this returns a placeholder.
   const styleDescriptor = preset.styleDescriptor;

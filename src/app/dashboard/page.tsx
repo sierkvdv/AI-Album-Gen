@@ -59,6 +59,7 @@ export default function DashboardPage() {
       const gensRes = await fetch('/api/user/generations');
       const gens = await gensRes.json();
       setGenerations(gens.generations || []);
+      console.log('Fetched generations:', gens.generations); // Debug log
     } catch (err) {
       setError('Failed to load data. Please try refreshing the page.');
     }
@@ -87,10 +88,8 @@ export default function DashboardPage() {
       }
       setSuccessMessage('Image generated successfully!');
       setPrompt('');
-      // Refresh generations list
-      const gensRes = await fetch('/api/user/generations');
-      const gens = await gensRes.json();
-      setGenerations(gens.generations || []);
+      // Refresh all data including generations and credits
+      await fetchData();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate image');
     } finally {
@@ -168,7 +167,8 @@ export default function DashboardPage() {
         // Refresh user data to show updated credits
         await fetchData();
         // Force refresh the session to update credits display
-        window.location.reload();
+        const { getSession } = await import('next-auth/react');
+        await getSession();
       } else {
         setError(data.error || 'Failed to add credits');
       }
