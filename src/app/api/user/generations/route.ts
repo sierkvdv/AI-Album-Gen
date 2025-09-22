@@ -26,6 +26,10 @@ export async function GET(req: NextRequest) {
       where: { userId: user.id },
       orderBy: { createdAt: 'desc' },
     });
+    
+    console.log('Found generations for user:', user.id, 'Count:', generations.length);
+    console.log('Generations:', generations);
+    
     return NextResponse.json({ generations });
   } catch (error) {
     console.error('Generations API error:', error);

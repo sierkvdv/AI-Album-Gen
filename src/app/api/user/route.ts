@@ -18,6 +18,9 @@ export async function GET(req: NextRequest) {
       where: { email: session.user.email },
     });
     
+    console.log('User API - Looking for user with email:', session.user.email);
+    console.log('User API - Found user:', user ? { id: user.id, email: user.email, credits: user.credits } : 'null');
+    
     if (!user) {
       return NextResponse.json({ user: null }, { status: 404 });
     }
