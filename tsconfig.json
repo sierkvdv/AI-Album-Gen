@@ -1,27 +1,5 @@
 {
   "compilerOptions": {
-<<<<<<< HEAD
-    "target": "es2019",
-    "module": "esnext",
-    "lib": ["dom", "dom.iterable", "esnext"],
-    "allowJs": true,
-    "skipLibCheck": true,
-    "strict": false,
-    "forceConsistentCasingInFileNames": true,
-    "noEmit": true,
-    "esModuleInterop": true,
-    "moduleResolution": "node",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "jsx": "preserve",
-    "baseUrl": ".",
-    "paths": {
-      "@/lib/*": ["src/lib/*"],
-      "@/app/*": ["src/app/*"]
-    }
-  },
-  "include": ["next-env.d.ts", "src/**/*", "playwright/tests/**/*"],
-=======
     "target": "ES2020",
     "lib": ["DOM", "DOM.Iterable", "ESNext"],
     "allowJs": true,
@@ -41,7 +19,6 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["next-env.d.ts", "src/**/*", "prisma/**/*"],
->>>>>>> 046ecbe6ce62922c21012150d250ea1a01b13417
+  "include": ["next-env.d.ts", "src/**/*", "prisma/**/*", "playwright/tests/**/*"],
   "exclude": ["node_modules"]
 }
