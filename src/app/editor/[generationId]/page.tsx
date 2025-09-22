@@ -249,7 +249,7 @@ export default function EditorPage({ params }: { params: { generationId: string 
       // Apply filters to drawing context
       ctx.filter = computeCssFilters(project!.filters);
       // Draw base image scaled to fill the canvas
-      ctx.drawImage(image, 0, 0, size, size);
+      ctx.drawImage(image!, 0, 0, size, size);
       ctx.filter = 'none';
       // Draw each layer
       project!.layers.forEach((layer) => {
