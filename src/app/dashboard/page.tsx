@@ -164,7 +164,7 @@ export default function DashboardPage() {
         {session && (
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-600">
-              Credits: {session.user?.credits || 0}
+              Credits: {(session.user as any)?.credits || 0}
             </span>
             <button
               onClick={handleSignOut}
@@ -225,7 +225,7 @@ export default function DashboardPage() {
           </div>
           <button
             type="submit"
-            disabled={loading || (session.user?.credits || 0) < 1}
+            disabled={loading || ((session.user as any)?.credits || 0) < 1}
             className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
             {loading ? 'Generating...' : 'Generate Cover (1 Credit)'}
