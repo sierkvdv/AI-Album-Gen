@@ -1,19 +1,23 @@
 /**
- * Generate an album cover image using OpenAI DALL·E API.
+ * Generate an image using OpenAI DALL·E API.
  *
- * This function calls the OpenAI DALL·E API to generate a real album cover
+ * This function calls the OpenAI DALL·E API to generate a real image
  * based on the provided prompt and style. The generated image is then
  * downloaded and stored in Supabase Storage for permanent access.
  *
- * @param prompt The user provided prompt describing the cover.
+ * @param prompt The user provided prompt describing the image.
  * @param style  A human‑readable description of the style preset.
  * @param userId The user ID for organizing stored images.
+ * @param width The desired width of the generated image.
+ * @param height The desired height of the generated image.
  * @returns A URL string pointing to the generated image stored in Supabase.
  */
 export async function generateAlbumCover(
   prompt: string,
   style: string,
-  userId?: string
+  userId?: string,
+  width: number = 1024,
+  height: number = 1024
 ): Promise<string> {
   // Use the mock image when testing or when OpenAI is not configured.
   if (process.env.MOCK_OPENAI === "true" || !process.env.OPENAI_API_KEY) {
@@ -22,8 +26,10 @@ export async function generateAlbumCover(
   }
 
   try {
-    // Create the full prompt with style
-    const fullPrompt = `Create an album cover for: ${prompt}. Style: ${style}. High quality, professional album cover design.`;
+    // Create the full prompt with style (or without if no style is selected)
+    const fullPrompt = style 
+      ? `Create an image: ${prompt}. Style: ${style}. High quality, professional design.`
+      : `Create an image: ${prompt}. High quality, professional design.`;
 
     // Call OpenAI DALL·E API
     const response = await fetch('https://api.openai.com/v1/images/generations', {
@@ -36,7 +42,7 @@ export async function generateAlbumCover(
         model: 'dall-e-3',
         prompt: fullPrompt,
         n: 1,
-        size: '1024x1024',
+        size: `${width}x${height}`,
         quality: 'hd',
         response_format: 'url'
       }),
@@ -53,13 +59,13 @@ export async function generateAlbumCover(
     // If userId is provided, download and store the image in Supabase
     if (userId) {
       const { downloadAndStoreImage } = await import('./storage');
-      const fileName = `album-cover-${Date.now()}.png`;
+      const fileName = `image-${Date.now()}.png`;
       return await downloadAndStoreImage(imageUrl, fileName, userId);
     }
 
     return imageUrl;
   } catch (error) {
-    console.error('Error generating album cover:', error);
+    console.error('Error generating image:', error);
     // Fallback to placeholder if generation fails
     return "/placeholder_light_gray_block.png";
   }

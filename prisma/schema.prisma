@@ -80,6 +80,9 @@ model Generation {
   userId      String
   prompt      String
   style       String
+  aspectRatio String    @default("square")
+  width       Int       @default(1024)
+  height      Int       @default(1024)
   imageUrl    String
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   projects    Project[]

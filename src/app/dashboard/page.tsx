@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import { stylePresets } from '@/lib/stylePresets';
+import { aspectRatios } from '@/lib/aspectRatios';
 import { loadStripe } from '@stripe/stripe-js';
 
 /**
@@ -14,6 +15,9 @@ interface Generation {
   id: string;
   prompt: string;
   style: string;
+  aspectRatio: string;
+  width: number;
+  height: number;
   imageUrl: string;
   createdAt: string;
 }
@@ -28,7 +32,8 @@ export default function DashboardPage() {
   const router = useRouter();
   const { data: session } = useSession();
   const [prompt, setPrompt] = useState('');
-  const [styleId, setStyleId] = useState(stylePresets[0]?.id ?? '');
+  const [styleId, setStyleId] = useState('none'); // Default to "No Style"
+  const [aspectRatioId, setAspectRatioId] = useState(aspectRatios[0]?.id ?? '');
   const [generations, setGenerations] = useState<Generation[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -72,20 +77,20 @@ export default function DashboardPage() {
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, styleId }),
+        body: JSON.stringify({ prompt, styleId, aspectRatioId }),
       });
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to generate cover');
+        throw new Error(data.error || 'Failed to generate image');
       }
-      setSuccessMessage('Cover generated successfully!');
+      setSuccessMessage('Image generated successfully!');
       setPrompt('');
       // Refresh generations list
       const gensRes = await fetch('/api/user/generations');
       const gens = await gensRes.json();
       setGenerations(gens.generations || []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to generate cover');
+      setError(err instanceof Error ? err.message : 'Failed to generate image');
     } finally {
       setLoading(false);
     }
@@ -190,11 +195,11 @@ export default function DashboardPage() {
 
       {/* Generation Form */}
       <div className="mt-6 p-6 bg-white border rounded-lg">
-        <h2 className="text-lg font-semibold mb-4">Generate New Cover</h2>
+        <h2 className="text-lg font-semibold mb-4">Generate New Image</h2>
         <form onSubmit={handleGenerate} className="space-y-4">
           <div>
             <label htmlFor="prompt" className="block text-sm font-medium text-gray-700">
-              Describe your album cover
+              Describe your image
             </label>
             <input
               type="text"
@@ -205,6 +210,23 @@ export default function DashboardPage() {
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               required
             />
+          </div>
+          <div>
+            <label htmlFor="aspectRatio" className="block text-sm font-medium text-gray-700">
+              Aspect Ratio
+            </label>
+            <select
+              id="aspectRatio"
+              value={aspectRatioId}
+              onChange={(e) => setAspectRatioId(e.target.value)}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            >
+              {aspectRatios.map((ratio) => (
+                <option key={ratio.id} value={ratio.id}>
+                  {ratio.name} ({ratio.ratio}) - {ratio.description}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label htmlFor="style" className="block text-sm font-medium text-gray-700">
@@ -218,7 +240,7 @@ export default function DashboardPage() {
             >
               {stylePresets.map((style) => (
                 <option key={style.id} value={style.id}>
-                  {style.name}
+                  {style.category === 'None' ? style.name : `${style.name} (${style.category})`} - {style.description}
                 </option>
               ))}
             </select>
@@ -228,7 +250,7 @@ export default function DashboardPage() {
             disabled={loading || ((session.user as any)?.credits || 0) < 1}
             className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
-            {loading ? 'Generating...' : 'Generate Cover (1 Credit)'}
+            {loading ? 'Generating...' : 'Generate Image (1 Credit)'}
           </button>
         </form>
       </div>
@@ -277,6 +299,8 @@ export default function DashboardPage() {
                   className="w-full h-48 object-cover rounded mb-3"
                 />
                 <h3 className="font-medium text-sm mb-2 line-clamp-2">{gen.prompt}</h3>
+                <p className="text-xs text-gray-500 mb-1">Style: {gen.style}</p>
+                <p className="text-xs text-gray-500 mb-1">Size: {gen.width}x{gen.height} ({gen.aspectRatio})</p>
                 <p className="text-xs text-gray-500 mb-3">
                   {new Date(gen.createdAt).toLocaleDateString()}
                 </p>

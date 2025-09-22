@@ -1,8 +1,7 @@
-# AI Album Cover Generator
+# FWP AI Image Generator
 
-<<<<<<< HEAD
-The AI Album Cover Generator is a full‑stack SaaS application that allows users to
-generate beautiful square album covers using OpenAI's DALL·E API and manage
+The FWP AI Image Generator is a full‑stack SaaS application that allows users to
+generate beautiful images in various aspect ratios using OpenAI's DALL·E API and manage
 their creations in a modern dashboard. Authentication is handled via Auth.js
 v5 with support for Google OAuth and a development credentials provider. A
 credits system tracks usage and integrates with Stripe Checkout for payments.
