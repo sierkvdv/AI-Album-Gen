@@ -37,6 +37,9 @@ export async function generateAlbumCover(
       ? `Create an image: ${prompt}. Style: ${style}. High quality, professional design.`
       : `Create an image: ${prompt}. High quality, professional design.`;
 
+    console.log('AI Helper: Calling OpenAI API with prompt:', fullPrompt);
+    console.log('AI Helper: Parameters:', { width, height, quality });
+
     // Call OpenAI DALL·E API
     const response = await fetch('https://api.openai.com/v1/images/generations', {
       method: 'POST',
@@ -54,24 +57,36 @@ export async function generateAlbumCover(
       }),
     });
 
+    console.log('AI Helper: OpenAI API response status:', response.status);
+
     if (!response.ok) {
       const errorData = await response.json();
+      console.error('AI Helper: OpenAI API error:', errorData);
       throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'}`);
     }
 
     const data = await response.json();
+    console.log('AI Helper: OpenAI API success response:', data);
     const imageUrl = data.data[0].url;
 
     // If userId is provided, download and store the image in Supabase
     if (userId) {
+      console.log('AI Helper: Storing image in Supabase for user:', userId);
       const { downloadAndStoreImage } = await import('./storage');
       const fileName = `image-${Date.now()}.png`;
-      return await downloadAndStoreImage(imageUrl, fileName, userId);
+      const storedUrl = await downloadAndStoreImage(imageUrl, fileName, userId);
+      console.log('AI Helper: Image stored successfully:', storedUrl);
+      return storedUrl;
     }
 
+    console.log('AI Helper: Returning direct image URL:', imageUrl);
     return imageUrl;
   } catch (error) {
-    console.error('Error generating image:', error);
+    console.error('AI Helper: Error generating image:', error);
+    console.error('AI Helper: Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    });
     // Fallback to placeholder if generation fails
     return "/placeholder_light_gray_block.png";
   }
