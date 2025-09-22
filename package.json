@@ -7,13 +7,8 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
-<<<<<<< HEAD
     "test": "npx playwright test",
     "test:ui": "npx playwright test --ui",
-=======
-    "test": "playwright test",
-    "test:ui": "playwright test --ui",
->>>>>>> 046ecbe6ce62922c21012150d250ea1a01b13417
     "prisma": "prisma",
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
@@ -29,12 +24,8 @@
     "next-auth": "^4.24.5",
     "react": "18.2.0",
     "react-dom": "18.2.0",
-<<<<<<< HEAD
     "stripe": "^11.3.0",
     "jszip": "^3.10.0"
-=======
-    "stripe": "^11.3.0"
->>>>>>> 046ecbe6ce62922c21012150d250ea1a01b13417
   },
   "devDependencies": {
     "@playwright/test": "^1.40.0",
@@ -47,8 +38,4 @@
     "tailwindcss": "3.3.5",
     "typescript": "5.3.2"
   }
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> 046ecbe6ce62922c21012150d250ea1a01b13417
