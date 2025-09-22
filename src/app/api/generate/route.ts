@@ -65,8 +65,22 @@ export async function POST(request: Request) {
     const quality = aspectRatio.id.includes('_hd') ? 'hd' : 'standard';
     console.log('Generate API: Using quality:', quality);
     
-    const imageUrl = await generateAlbumCover(prompt, styleDescriptor, userId, aspectRatio.width, aspectRatio.height, quality);
-    console.log('Generate API: Image generated:', imageUrl);
+    let imageUrl: string;
+    try {
+      imageUrl = await generateAlbumCover(prompt, styleDescriptor, userId, aspectRatio.width, aspectRatio.height, quality);
+      console.log('Generate API: Image generated:', imageUrl);
+    } catch (error) {
+      // Re-throw content policy violations and prompt rejections
+      if (error instanceof Error && (
+        error.message.startsWith('CONTENT_POLICY_VIOLATION:') || 
+        error.message.startsWith('PROMPT_REJECTED:')
+      )) {
+        throw error;
+      }
+      // For other errors, log and continue with placeholder
+      console.error('Generate API: AI generation failed, using placeholder:', error);
+      imageUrl = "/placeholder_light_gray_block.png";
+    }
 
     // Persist the generation and decrement the user's credits in a transaction.
     console.log('Generate API: Saving to database');
