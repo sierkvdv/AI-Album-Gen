@@ -69,10 +69,20 @@ export async function POST(request: Request) {
     // Use raw SQL to avoid Prisma schema issues
     const generationId = `gen_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
-    await db.$executeRaw`
-      INSERT INTO "Generation" ("id", "userId", "prompt", "style", "aspectRatio", "width", "height", "imageUrl", "createdAt")
-      VALUES (${generationId}, ${userId}, ${prompt}, ${preset.name}, ${aspectRatio.id}, ${aspectRatio.width}, ${aspectRatio.height}, ${imageUrl}, NOW())
-    `;
+    // Try to insert with new columns first, fallback to old schema if they don't exist
+    try {
+      await db.$executeRaw`
+        INSERT INTO "Generation" ("id", "userId", "prompt", "style", "aspectRatio", "width", "height", "imageUrl", "createdAt")
+        VALUES (${generationId}, ${userId}, ${prompt}, ${preset.name}, ${aspectRatio.id}, ${aspectRatio.width}, ${aspectRatio.height}, ${imageUrl}, NOW())
+      `;
+    } catch (error) {
+      console.log('Generate API: New schema failed, trying old schema:', error);
+      // Fallback to old schema without aspectRatio columns
+      await db.$executeRaw`
+        INSERT INTO "Generation" ("id", "userId", "prompt", "style", "imageUrl", "createdAt")
+        VALUES (${generationId}, ${userId}, ${prompt}, ${preset.name}, ${imageUrl}, NOW())
+      `;
+    }
     
     await db.$executeRaw`
       UPDATE "User" 
