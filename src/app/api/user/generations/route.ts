@@ -25,6 +25,14 @@ export async function GET(req: NextRequest) {
     const generations = await db.generation.findMany({
       where: { userId: user.id },
       orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        userId: true,
+        prompt: true,
+        style: true,
+        imageUrl: true,
+        createdAt: true
+      }
     });
     
     console.log('Found generations for user:', user.id, 'Count:', generations.length);

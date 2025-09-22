@@ -39,9 +39,6 @@ export async function GET(req: NextRequest) {
         userId: true,
         prompt: true,
         style: true,
-        aspectRatio: true,
-        width: true,
-        height: true,
         imageUrl: true,
         createdAt: true
       },

@@ -59,9 +59,6 @@ export async function POST(request: Request) {
         userId,
         prompt,
         style: preset.name,
-        aspectRatio: aspectRatio.id,
-        width: aspectRatio.width,
-        height: aspectRatio.height,
         imageUrl,
       },
     });

@@ -15,9 +15,6 @@ interface Generation {
   id: string;
   prompt: string;
   style: string;
-  aspectRatio: string;
-  width: number;
-  height: number;
   imageUrl: string;
   createdAt: string;
 }
@@ -331,7 +328,6 @@ export default function DashboardPage() {
                 />
                 <h3 className="font-medium text-sm mb-2 line-clamp-2">{gen.prompt}</h3>
                 <p className="text-xs text-gray-500 mb-1">Style: {gen.style}</p>
-                <p className="text-xs text-gray-500 mb-1">Size: {gen.width}x{gen.height} ({gen.aspectRatio})</p>
                 <p className="text-xs text-gray-500 mb-3">
                   {new Date(gen.createdAt).toLocaleDateString()}
                 </p>
