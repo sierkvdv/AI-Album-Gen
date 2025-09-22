@@ -21,20 +21,15 @@ export async function POST(request: Request) {
   }
 
   const { prompt, styleId, aspectRatioId } = await request.json();
-  if (!prompt || typeof prompt !== "string" || !styleId || typeof styleId !== "string" || !aspectRatioId || typeof aspectRatioId !== "string") {
+  if (!prompt || typeof prompt !== "string" || !styleId || typeof styleId !== "string") {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
-  // Import style presets and aspect ratios from the existing configuration
+  // Import style presets from the existing configuration
   const { stylePresets } = await import("@/lib/stylePresets");
-  const { aspectRatios } = await import("@/lib/aspectRatios");
   const preset = stylePresets.find((p: any) => p.id === styleId);
-  const aspectRatio = aspectRatios.find((r: any) => r.id === aspectRatioId);
   if (!preset) {
     return NextResponse.json({ error: "Invalid style preset" }, { status: 400 });
-  }
-  if (!aspectRatio) {
-    return NextResponse.json({ error: "Invalid aspect ratio" }, { status: 400 });
   }
 
   // Check if the user has enough credits by email (more reliable than session ID)
@@ -50,7 +45,7 @@ export async function POST(request: Request) {
 
   // Generate the image using the AI helper.  In dev, this returns a placeholder.
   const styleDescriptor = preset.styleDescriptor;
-  const imageUrl = await generateAlbumCover(prompt, styleDescriptor, userId, aspectRatio.width, aspectRatio.height);
+  const imageUrl = await generateAlbumCover(prompt, styleDescriptor, userId, 1024, 1024);
 
   // Persist the generation and decrement the user's credits in a transaction.
   await db.$transaction(async (tx) => {
