@@ -196,6 +196,8 @@ export default function DashboardPage() {
       setSuccessMessage(data.message);
       // Refresh user data to show updated credits
       await fetchData();
+      // Force refresh the session to update credits display
+      window.location.reload();
     } catch (err) {
       console.error('Add credits error:', err);
       setError('Failed to add credits');
