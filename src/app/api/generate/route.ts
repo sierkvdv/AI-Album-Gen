@@ -61,28 +61,25 @@ export async function POST(request: Request) {
 
     // Persist the generation and decrement the user's credits in a transaction.
     console.log('Generate API: Saving to database');
-    await db.$transaction(async (tx) => {
-      await tx.generation.create({
-        data: {
-          userId,
-          prompt,
-          style: preset.name,
-          imageUrl,
-        },
-      });
-      await tx.user.update({
-        where: { id: userId },
-        data: { credits: { decrement: 1 } },
-      });
-      await tx.creditLedger.create({
-        data: {
-          userId,
-          type: LedgerType.USE,
-          amount: 1,
-          reference: "generate",
-        },
-      });
-    });
+    
+    // Use raw SQL to avoid Prisma schema issues
+    const generationId = `gen_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    await db.$executeRaw`
+      INSERT INTO "Generation" ("id", "userId", "prompt", "style", "imageUrl", "createdAt")
+      VALUES (${generationId}, ${userId}, ${prompt}, ${preset.name}, ${imageUrl}, NOW())
+    `;
+    
+    await db.$executeRaw`
+      UPDATE "User" 
+      SET "credits" = "credits" - 1, "updatedAt" = NOW()
+      WHERE "id" = ${userId}
+    `;
+    
+    await db.$executeRaw`
+      INSERT INTO "CreditLedger" ("id", "userId", "type", "amount", "reference", "createdAt")
+      VALUES (${`ledger_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`}, ${userId}, ${LedgerType.USE}, 1, 'generate', NOW())
+    `;
 
     console.log('Generate API: Success');
     return NextResponse.json({ imageUrl });
