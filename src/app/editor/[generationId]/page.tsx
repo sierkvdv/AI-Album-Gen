@@ -236,23 +236,23 @@ export default function EditorPage({ params }: { params: { generationId: string 
     // containing a PNG or JPG. For JPG exports a quality parameter can be
     // specified.
     async function renderToBlob(size: number, mime: 'image/png' | 'image/jpeg', quality?: number) {
-      const aspect = project.crop?.aspect || '1:1';
+      const aspect = project!.crop?.aspect || '1:1';
       // Determine crop rectangle. For now, we assume a square crop covering
       // the entire image. Additional crop support can be added later.
-      const srcW = project.baseWidth;
-      const srcH = project.baseHeight;
+      const srcW = project!.baseWidth;
+      const srcH = project!.baseHeight;
       // Create offscreen canvas
       const canvas = document.createElement('canvas');
       canvas.width = size;
       canvas.height = size;
       const ctx = canvas.getContext('2d')!;
       // Apply filters to drawing context
-      ctx.filter = computeCssFilters(project.filters);
+      ctx.filter = computeCssFilters(project!.filters);
       // Draw base image scaled to fill the canvas
       ctx.drawImage(image, 0, 0, size, size);
       ctx.filter = 'none';
       // Draw each layer
-      project.layers.forEach((layer) => {
+      project!.layers.forEach((layer) => {
         ctx.save();
         // Translate to centre of layer then apply rotation and scale
         const scaleX = size / srcW;
