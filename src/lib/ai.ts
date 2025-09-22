@@ -62,6 +62,16 @@ export async function generateAlbumCover(
     if (!response.ok) {
       const errorData = await response.json();
       console.error('AI Helper: OpenAI API error:', errorData);
+      
+      // Handle specific OpenAI error types
+      if (errorData.error?.code === 'content_policy_violation') {
+        throw new Error('CONTENT_POLICY_VIOLATION: Your prompt contains content that violates OpenAI\'s safety guidelines. Please try a different prompt.');
+      }
+      
+      if (errorData.error?.type === 'image_generation_user_error') {
+        throw new Error(`PROMPT_REJECTED: ${errorData.error.message}`);
+      }
+      
       throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'}`);
     }
 

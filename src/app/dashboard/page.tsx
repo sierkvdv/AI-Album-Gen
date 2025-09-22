@@ -95,9 +95,25 @@ export default function DashboardPage() {
         let errorMessage = 'Failed to generate image';
         try {
           const errorData = JSON.parse(errorText);
-          errorMessage = errorData.error || errorMessage;
-          if (errorData.message) {
-            errorMessage += ` - ${errorData.message}`;
+          
+          // Handle specific error types with user-friendly messages
+          if (errorData.code === 'CONTENT_POLICY_VIOLATION') {
+            errorMessage = '🚫 Content Policy Violation';
+            if (errorData.message) {
+              errorMessage += `\n\n${errorData.message}`;
+            }
+            errorMessage += '\n\n💡 Try using a different prompt that doesn\'t contain potentially harmful or inappropriate content.';
+          } else if (errorData.code === 'PROMPT_REJECTED') {
+            errorMessage = '❌ Prompt Rejected';
+            if (errorData.message) {
+              errorMessage += `\n\n${errorData.message}`;
+            }
+            errorMessage += '\n\n💡 Please try rephrasing your prompt or using different keywords.';
+          } else {
+            errorMessage = errorData.error || errorMessage;
+            if (errorData.message) {
+              errorMessage += ` - ${errorData.message}`;
+            }
           }
         } catch {
           errorMessage = errorText || errorMessage;

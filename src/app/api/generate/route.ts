@@ -104,6 +104,26 @@ export async function POST(request: Request) {
     return NextResponse.json({ imageUrl });
   } catch (error) {
     console.error('Generate API: Error:', error);
+    
+    // Handle specific error types
+    if (error instanceof Error) {
+      if (error.message.startsWith('CONTENT_POLICY_VIOLATION:')) {
+        return NextResponse.json({ 
+          error: "Content Policy Violation", 
+          message: error.message.replace('CONTENT_POLICY_VIOLATION: ', ''),
+          code: 'CONTENT_POLICY_VIOLATION'
+        }, { status: 400 });
+      }
+      
+      if (error.message.startsWith('PROMPT_REJECTED:')) {
+        return NextResponse.json({ 
+          error: "Prompt Rejected", 
+          message: error.message.replace('PROMPT_REJECTED: ', ''),
+          code: 'PROMPT_REJECTED'
+        }, { status: 400 });
+      }
+    }
+    
     return NextResponse.json({ 
       error: "Internal server error", 
       message: error instanceof Error ? error.message : 'Unknown error' 
