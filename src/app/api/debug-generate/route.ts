@@ -120,8 +120,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ 
       success: true,
       message: "All checks passed - generation should work",
-      user: { id: session.user.id, email: session.user.email },
-      credits: user.credits
+      user: { id: session.user.id, email: session.user.email }
     });
     
   } catch (error) {
