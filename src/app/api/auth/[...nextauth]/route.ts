@@ -46,21 +46,9 @@ export const authOptions = {
     async session({ session, token }: any) {
       if (session?.user && token) {
         (session.user as any).id = (token as any).id;
-        // Fetch fresh user data from database to get updated credits
-        try {
-          const { prisma } = await import('@/lib/prisma');
-          const db = prisma();
-          const user = await db.user.findUnique({
-            where: { email: (token as any).email || session.user.email! },
-            select: { credits: true, isAdmin: true }
-          });
-          if (user) {
-            (session.user as any).credits = user.credits;
-            (session.user as any).isAdmin = user.isAdmin;
-          }
-        } catch (error) {
-          console.error('Error fetching user data in session:', error);
-        }
+        // Set default credits if not available
+        (session.user as any).credits = (session.user as any).credits || 0;
+        (session.user as any).isAdmin = (session.user as any).isAdmin || false;
       }
       return session;
     },

@@ -42,22 +42,31 @@ export default function DashboardPage() {
   const fetchData = async () => {
     try {
       const sessRes = await fetch('/api/user');
-      const sess = await sessRes.json();
-      if (!sessRes.ok || !sess?.user) {
-        // Only redirect if it's a 401 (unauthorized), not a 500 (server error)
+      if (!sessRes.ok) {
         if (sessRes.status === 401) {
           router.push('/');
           return;
         }
-        // For other errors, show error message but don't redirect
         setError('Unable to load user data. Please try refreshing the page.');
         return;
       }
+      const sess = await sessRes.json();
+      if (!sess?.user) {
+        setError('User data not found. Please try refreshing the page.');
+        return;
+      }
+      
       const gensRes = await fetch('/api/user/generations');
+      if (!gensRes.ok) {
+        console.error('Generations API error:', gensRes.status);
+        setGenerations([]);
+        return;
+      }
       const gens = await gensRes.json();
       setGenerations(gens.generations || []);
-      console.log('Fetched generations:', gens.generations); // Debug log
+      console.log('Fetched generations:', gens.generations);
     } catch (err) {
+      console.error('Fetch data error:', err);
       setError('Failed to load data. Please try refreshing the page.');
     }
   };
@@ -79,15 +88,26 @@ export default function DashboardPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt, styleId, aspectRatioId }),
       });
-      const data = await res.json();
+      
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to generate image');
+        const errorText = await res.text();
+        let errorMessage = 'Failed to generate image';
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.error || errorMessage;
+        } catch {
+          errorMessage = errorText || errorMessage;
+        }
+        throw new Error(errorMessage);
       }
+      
+      const data = await res.json();
       setSuccessMessage('Image generated successfully!');
       setPrompt('');
       // Refresh all data including generations and credits
       await fetchData();
     } catch (err) {
+      console.error('Generate error:', err);
       setError(err instanceof Error ? err.message : 'Failed to generate image');
     } finally {
       setLoading(false);
@@ -158,18 +178,26 @@ export default function DashboardPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ amount }),
       });
-      const data = await res.json();
-      if (res.ok) {
-        setSuccessMessage(data.message);
-        // Refresh user data to show updated credits
-        await fetchData();
-        // Force refresh the session to update credits display
-        const { getSession } = await import('next-auth/react');
-        await getSession();
-      } else {
-        setError(data.error || 'Failed to add credits');
+      
+      if (!res.ok) {
+        const errorText = await res.text();
+        let errorMessage = 'Failed to add credits';
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.error || errorMessage;
+        } catch {
+          errorMessage = errorText || errorMessage;
+        }
+        setError(errorMessage);
+        return;
       }
+      
+      const data = await res.json();
+      setSuccessMessage(data.message);
+      // Refresh user data to show updated credits
+      await fetchData();
     } catch (err) {
+      console.error('Add credits error:', err);
       setError('Failed to add credits');
     }
   };
