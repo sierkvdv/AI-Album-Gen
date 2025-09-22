@@ -31,13 +31,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
     }
 
-    // Import style presets from the existing configuration
+    // Import style presets and aspect ratios from the existing configuration
     const { stylePresets } = await import("@/lib/stylePresets");
+    const { aspectRatios } = await import("@/lib/aspectRatios");
+    
     const preset = stylePresets.find((p: any) => p.id === styleId);
     if (!preset) {
       console.log('Generate API: Invalid style preset:', styleId);
       return NextResponse.json({ error: "Invalid style preset" }, { status: 400 });
     }
+    
+    const aspectRatio = aspectRatios.find((r: any) => r.id === aspectRatioId) || aspectRatios[0];
+    console.log('Generate API: Using aspect ratio:', aspectRatio);
 
     // Check if the user has enough credits by email (more reliable than session ID)
     console.log('Generate API: Checking user credits');
@@ -52,10 +57,10 @@ export async function POST(request: Request) {
     }
     const userId = user.id;
 
-    // Generate the image using the AI helper.  In dev, this returns a placeholder.
+    // Generate the image using the AI helper with the selected aspect ratio
     console.log('Generate API: Generating image');
     const styleDescriptor = preset.styleDescriptor;
-    const imageUrl = await generateAlbumCover(prompt, styleDescriptor, userId, 1024, 1024);
+    const imageUrl = await generateAlbumCover(prompt, styleDescriptor, userId, aspectRatio.width, aspectRatio.height);
     console.log('Generate API: Image generated:', imageUrl);
 
     // Persist the generation and decrement the user's credits in a transaction.
@@ -65,8 +70,8 @@ export async function POST(request: Request) {
     const generationId = `gen_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
     await db.$executeRaw`
-      INSERT INTO "Generation" ("id", "userId", "prompt", "style", "imageUrl", "createdAt")
-      VALUES (${generationId}, ${userId}, ${prompt}, ${preset.name}, ${imageUrl}, NOW())
+      INSERT INTO "Generation" ("id", "userId", "prompt", "style", "aspectRatio", "width", "height", "imageUrl", "createdAt")
+      VALUES (${generationId}, ${userId}, ${prompt}, ${preset.name}, ${aspectRatio.id}, ${aspectRatio.width}, ${aspectRatio.height}, ${imageUrl}, NOW())
     `;
     
     await db.$executeRaw`
