@@ -20,15 +20,31 @@ export async function GET(
 
     const generationId = params.id;
     console.log('Image API: Getting download URL for generation:', generationId);
+    console.log('Image API: Session user ID:', session.user.id);
+    console.log('Image API: Session user email:', session.user.email);
 
     const db = prisma();
-    const generation = await db.generation.findUnique({
-      where: { 
-        id: generationId,
-        userId: session.user.id // Ensure user can only access their own images
-      },
-      select: { imageUrl: true }
+    
+    // First try to find the generation by ID only (for debugging)
+    const generationById = await db.generation.findUnique({
+      where: { id: generationId },
+      select: { id: true, userId: true, imageUrl: true }
     });
+    
+    console.log('Image API: Generation found by ID:', generationById);
+    
+    if (!generationById) {
+      console.log('Image API: Generation not found by ID:', generationId);
+      return NextResponse.json({ error: "Generation not found" }, { status: 404 });
+    }
+    
+    // Check if user owns this generation
+    if (generationById.userId !== session.user.id) {
+      console.log('Image API: User does not own this generation. User ID:', session.user.id, 'Generation user ID:', generationById.userId);
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    }
+    
+    const generation = generationById;
 
     if (!generation) {
       console.log('Image API: Generation not found:', generationId);

@@ -17,9 +17,10 @@ export async function POST(request: NextRequest) {
 
     const { generationId, project } = await request.json();
     console.log('Projects API: Creating new project for generation:', generationId);
+    console.log('Projects API: Received project data:', project);
 
-    if (!generationId || !project) {
-      return NextResponse.json({ error: "Missing generationId or project data" }, { status: 400 });
+    if (!generationId) {
+      return NextResponse.json({ error: "Missing generationId" }, { status: 400 });
     }
 
     const db = prisma();
@@ -37,18 +38,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Generation not found" }, { status: 404 });
     }
 
+    // Create default project data if not provided
+    const defaultProject = {
+      id: `proj_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      baseAssetUrl: generation.imageUrl,
+      baseWidth: 1024, // Default width
+      baseHeight: 1024, // Default height
+      crop: { x: 0, y: 0, width: 1, height: 1 }, // No crop
+      filters: {}, // No filters
+      layers: [] // No additional layers
+    };
+
+    const projectData = project || defaultProject;
+    console.log('Projects API: Using project data:', projectData);
+
     // Create the project
     const newProject = await db.project.create({
       data: {
-        id: project.id,
+        id: projectData.id,
         userId: session.user.id,
         generationId: generationId,
-        baseAssetUrl: project.baseAssetUrl,
-        baseWidth: project.baseWidth,
-        baseHeight: project.baseHeight,
-        crop: project.crop,
-        filters: project.filters,
-        layers: project.layers
+        baseAssetUrl: projectData.baseAssetUrl,
+        baseWidth: projectData.baseWidth,
+        baseHeight: projectData.baseHeight,
+        crop: projectData.crop,
+        filters: projectData.filters,
+        layers: projectData.layers
       }
     });
 
