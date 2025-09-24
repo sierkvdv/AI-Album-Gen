@@ -38,9 +38,20 @@ export async function GET(
       return NextResponse.json({ error: "Generation not found" }, { status: 404 });
     }
     
-    // Check if user owns this generation
-    if (generationById.userId !== session.user.id) {
-      console.log('Image API: User does not own this generation. User ID:', session.user.id, 'Generation user ID:', generationById.userId);
+    // Find the user by email to get the correct database user ID
+    const user = await db.user.findUnique({
+      where: { email: session.user.email! },
+      select: { id: true }
+    });
+    
+    if (!user) {
+      console.log('Image API: User not found by email:', session.user.email);
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+    
+    // Check if user owns this generation using database user ID
+    if (generationById.userId !== user.id) {
+      console.log('Image API: User does not own this generation. Database User ID:', user.id, 'Generation user ID:', generationById.userId);
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
     

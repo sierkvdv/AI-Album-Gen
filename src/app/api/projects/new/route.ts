@@ -25,11 +25,22 @@ export async function POST(request: NextRequest) {
 
     const db = prisma();
     
+    // Find the user by email to get the correct database user ID
+    const user = await db.user.findUnique({
+      where: { email: session.user.email! },
+      select: { id: true }
+    });
+    
+    if (!user) {
+      console.log('Projects API: User not found by email:', session.user.email);
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
     // Verify the generation exists and belongs to the user
     const generation = await db.generation.findUnique({
       where: { 
         id: generationId,
-        userId: session.user.id
+        userId: user.id // Use database user ID instead of session user ID
       },
       select: { id: true, imageUrl: true }
     });
@@ -56,7 +67,7 @@ export async function POST(request: NextRequest) {
     const newProject = await db.project.create({
       data: {
         id: projectData.id,
-        userId: session.user.id,
+        userId: user.id, // Use database user ID instead of session user ID
         generationId: generationId,
         baseAssetUrl: projectData.baseAssetUrl,
         baseWidth: projectData.baseWidth,
