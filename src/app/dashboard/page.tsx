@@ -165,25 +165,69 @@ export default function DashboardPage() {
   // expires after a short period. Displays an alert if the URL is invalid.
   async function downloadGeneration(id: string) {
     try {
+      console.log('Downloading generation:', id);
       const res = await fetch(`/api/image/${id}`);
+      console.log('Download response status:', res.status);
+      
       if (!res.ok) {
-        throw new Error('Failed to get download URL');
+        const errorText = await res.text();
+        console.error('Download error response:', errorText);
+        throw new Error(`HTTP ${res.status}: ${errorText}`);
       }
+      
       const data = await res.json();
+      console.log('Download response data:', data);
+      
+      if (!data.url) {
+        throw new Error('No URL in response');
+      }
+      
       const link = document.createElement('a');
       link.href = data.url;
-      link.download = `album-cover-${id}.png`;
+      link.download = `fwp-image-${id}.png`;
+      link.target = '_blank'; // Open in new tab as fallback
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
     } catch (err) {
-      alert('Download failed. The image may have expired. Please try regenerating it.');
+      console.error('Download error:', err);
+      alert(`Download failed: ${err instanceof Error ? err.message : 'Unknown error'}. Please try regenerating it.`);
     }
   }
 
   // Redirect to editor for a specific generation
-  function editGeneration(id: string) {
-    router.push(`/editor/${id}`);
+  async function editGeneration(id: string) {
+    try {
+      console.log('Creating project for generation:', id);
+      
+      // First create a project
+      const res = await fetch('/api/projects/new', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ generationId: id })
+      });
+      
+      console.log('Project creation response status:', res.status);
+      
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error('Project creation error response:', errorText);
+        throw new Error(`Failed to create project: ${res.status} ${errorText}`);
+      }
+      
+      const data = await res.json();
+      console.log('Project creation response data:', data);
+      
+      if (!data.success) {
+        throw new Error('Project creation failed');
+      }
+      
+      // Redirect to editor
+      router.push(`/editor/${id}`);
+    } catch (err) {
+      console.error('Edit error:', err);
+      alert(`Failed to open editor: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    }
   }
 
   // Sign out and redirect to home
