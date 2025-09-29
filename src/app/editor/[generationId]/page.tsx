@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { googleFonts, getFontFamily } from '@/lib/googleFonts';
 
 /**
  * Represents a single editable text layer on the canvas. Each layer stores
@@ -364,6 +365,21 @@ export default function EditorPage({ params }: { params: { generationId: string 
             className="w-full border rounded p-2"
           />
         </div>
+        <div>
+          <label className="block text-sm font-medium">Font Family</label>
+          <select
+            value={layer.fontFamily}
+            onChange={(e) => updateLayer(layer.id, { fontFamily: e.target.value })}
+            className="w-full border rounded p-2"
+            style={{ fontFamily: getFontFamily(layer.fontFamily) }}
+          >
+            {googleFonts.map((font) => (
+              <option key={font.name} value={font.family} style={{ fontFamily: font.family }}>
+                {font.name} ({font.category})
+              </option>
+            ))}
+          </select>
+        </div>
         <div className="flex space-x-2">
           <div className="flex-1">
             <label className="block text-sm font-medium">Font size</label>
@@ -522,6 +538,11 @@ export default function EditorPage({ params }: { params: { generationId: string 
   }
   return (
     <div className="max-w-screen-lg mx-auto p-4">
+      {/* Load Google Fonts */}
+      <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto:wght@400;500;700&family=Open+Sans:wght@400;600;700&family=Lato:wght@400;700&family=Montserrat:wght@400;500;600;700&family=Source+Sans+Pro:wght@400;600;700&family=Poppins:wght@400;500;600;700&family=Nunito:wght@400;600;700&family=Playfair+Display:wght@400;700&family=Merriweather:wght@400;700&family=Lora:wght@400;700&family=Crimson+Text:wght@400;600&family=Libre+Baskerville:wght@400;700&family=Oswald:wght@400;500;600;700&family=Bebas+Neue&family=Anton&family=Righteous&family=Fredoka+One&family=Dancing+Script:wght@400;700&family=Pacifico&family=Caveat:wght@400;700&family=Kalam:wght@400;700&family=Comfortaa:wght@400;700&family=Fira+Code:wght@400;500&family=Source+Code+Pro:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet"
+      />
       <div className="flex justify-between items-center">
         <h1 className="text-xl font-bold">Simple Editor</h1>
         <Link href="/dashboard" className="text-blue-500 underline">← Back to dashboard</Link>
