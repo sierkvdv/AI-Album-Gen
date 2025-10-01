@@ -635,8 +635,8 @@ export default function EditorPage({ params }: { params: { generationId: string 
       // Set up canvas for better mask editing
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
-      // Start with a white background (fully visible)
-      ctx.fillStyle = 'white';
+      // Start with a black background (fully hidden)
+      ctx.fillStyle = 'black';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       
       const layer = project.layers.find((l) => l.id === layerId) as Layer | undefined;
@@ -674,7 +674,8 @@ export default function EditorPage({ params }: { params: { generationId: string 
     const x = ((e.clientX - containerRect.left) * project!.baseWidth) / containerRect.width;
     const y = ((e.clientY - containerRect.top) * project!.baseHeight) / containerRect.height;
     
-    ctx.globalCompositeOperation = maskMode === 'erase' ? 'destination-out' : 'source-over';
+    // Correct mask logic: white = show content, black = hide content
+    ctx.globalCompositeOperation = 'source-over';
     ctx.fillStyle = maskMode === 'erase' ? 'rgba(0,0,0,1)' : 'rgba(255,255,255,1)';
     ctx.globalAlpha = 1;
     
@@ -988,7 +989,9 @@ export default function EditorPage({ params }: { params: { generationId: string 
                 opacity: layer.opacity,
                 ...(layer.mask && { 
                   WebkitMask: `url(${layer.mask}) no-repeat center/contain`,
-                  mask: `url(${layer.mask}) no-repeat center/contain`
+                  mask: `url(${layer.mask}) no-repeat center/contain`,
+                  WebkitMaskComposite: 'source-in',
+                  maskComposite: 'intersect'
                 })
               } as any;
               if (layer.type === 'text') {
