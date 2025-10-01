@@ -629,6 +629,8 @@ export default function EditorPage({ params }: { params: { generationId: string 
       if (!canvas || !project) return;
       canvas.width = project.baseWidth;
       canvas.height = project.baseHeight;
+      canvas.style.width = `${project.baseWidth}px`;
+      canvas.style.height = `${project.baseHeight}px`;
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
       
@@ -988,8 +990,8 @@ export default function EditorPage({ params }: { params: { generationId: string 
                 transform: `translate(-50%, -50%) rotate(${layer.rotation}deg) scale(${layer.scale})`,
                 opacity: layer.opacity,
                 ...(layer.mask && { 
-                  WebkitMask: `url(${layer.mask}) no-repeat center/contain`,
-                  mask: `url(${layer.mask}) no-repeat center/contain`,
+                  WebkitMask: `url(${layer.mask}) no-repeat center/cover`,
+                  mask: `url(${layer.mask}) no-repeat center/cover`,
                   WebkitMaskComposite: 'source-in',
                   maskComposite: 'intersect'
                 })
@@ -1070,10 +1072,14 @@ export default function EditorPage({ params }: { params: { generationId: string 
             {maskEditingLayerId && (
               <canvas
                 ref={maskCanvasRef}
-                className="absolute inset-0 z-10 touch-none cursor-crosshair"
+                className="absolute z-10 touch-none cursor-crosshair"
                 style={{ 
                   background: 'rgba(255,0,0,0.2)',
-                  mixBlendMode: 'multiply'
+                  mixBlendMode: 'multiply',
+                  left: 0,
+                  top: 0,
+                  width: '100%',
+                  height: '100%'
                 }}
                 onPointerDown={handleMaskDraw}
                 onPointerMove={handleMaskDraw}
@@ -1105,6 +1111,9 @@ export default function EditorPage({ params }: { params: { generationId: string 
               <h3 className="font-semibold">Masking</h3>
               <p className="text-sm text-gray-600">
                 Zwart = verborgen, Wit = zichtbaar. Sleep om te maskeren.
+              </p>
+              <p className="text-xs text-gray-500">
+                Masking layer: {maskEditingLayerId}
               </p>
               <div className="flex items-center space-x-2">
                 <label>Mode</label>
