@@ -691,6 +691,9 @@ export default function EditorPage({ params }: { params: { generationId: string 
     scaledCtx.drawImage(canvas, 0, 0, project.baseWidth, project.baseHeight);
     const dataUrl = scaledCanvas.toDataURL('image/png');
     
+    console.log('Saving mask for layer:', maskEditingLayerId);
+    console.log('Mask data URL length:', dataUrl.length);
+    
     updateLayer(maskEditingLayerId, { mask: dataUrl });
     setMaskEditingLayerId(null);
   }
@@ -1118,8 +1121,11 @@ export default function EditorPage({ params }: { params: { generationId: string 
                       WebkitTextStrokeColor: tl.outline ? tl.outline.color : undefined,
                       backdropFilter: tl.blurBehind ? 'blur(4px)' : undefined,
                       WebkitBackdropFilter: tl.blurBehind ? 'blur(4px)' : undefined,
-                      mask: layer.mask ? `url(${layer.mask})` : undefined,
-                      WebkitMask: layer.mask ? `url(${layer.mask})` : undefined,
+                      mask: layer.mask ? (() => {
+                        console.log('Applying mask to layer:', layer.id, 'mask length:', layer.mask.length);
+                        return `url(${layer.mask}) no-repeat center/cover`;
+                      })() : undefined,
+                      WebkitMask: layer.mask ? `url(${layer.mask}) no-repeat center/cover` : undefined,
                     }}
                   >
                     {tl.text}
@@ -1158,16 +1164,27 @@ export default function EditorPage({ params }: { params: { generationId: string 
             })}
             {/* Mask editing overlay */}
             {maskEditingLayerId && (
-              <canvas
-                ref={maskCanvasRef}
-                className="absolute inset-0 z-10 touch-none cursor-crosshair"
-                style={{ 
-                  background: 'transparent',
-                  pointerEvents: 'auto'
-                }}
-                onPointerDown={handleMaskDraw}
-                onPointerMove={handleMaskDraw}
-              />
+              <div className="absolute inset-0 z-10">
+                {/* Semi-transparent overlay to show what will be masked */}
+                <div 
+                  className="absolute inset-0 bg-black bg-opacity-30"
+                  style={{
+                    mask: `url(${project.layers.find(l => l.id === maskEditingLayerId)?.mask || 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='}) no-repeat center/cover`,
+                    WebkitMask: `url(${project.layers.find(l => l.id === maskEditingLayerId)?.mask || 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='}) no-repeat center/cover`
+                  }}
+                />
+                {/* Drawing canvas */}
+                <canvas
+                  ref={maskCanvasRef}
+                  className="absolute inset-0 touch-none cursor-crosshair"
+                  style={{ 
+                    background: 'transparent',
+                    pointerEvents: 'auto'
+                  }}
+                  onPointerDown={handleMaskDraw}
+                  onPointerMove={handleMaskDraw}
+                />
+              </div>
             )}
           </div>
           {/* Action buttons */}
