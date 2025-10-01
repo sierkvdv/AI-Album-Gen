@@ -90,7 +90,7 @@ export interface TextLayer extends LayerBase {
     intensity: number; // 0-20px blur
     spread: number; // 0-50px spread around text
     fade: number; // 0-100% fade intensity
-  };
+  } | undefined;
   /** When enabled the colour is automatically adjusted to maximise contrast
    * with the underlying image. */
   autoContrast: boolean;
@@ -954,7 +954,7 @@ export default function EditorPage({ params }: { params: { generationId: string 
                 max="20"
                 value={tl.blurBehind.intensity}
                 onChange={(e) => updateLayer(tl.id, { 
-                  blurBehind: { ...tl.blurBehind, intensity: parseInt(e.target.value) }
+                  blurBehind: tl.blurBehind ? { ...tl.blurBehind, intensity: parseInt(e.target.value) } : undefined
                 })}
                 className="w-full"
               />
@@ -968,7 +968,7 @@ export default function EditorPage({ params }: { params: { generationId: string 
                 max="50"
                 value={tl.blurBehind.spread}
                 onChange={(e) => updateLayer(tl.id, { 
-                  blurBehind: { ...tl.blurBehind, spread: parseInt(e.target.value) }
+                  blurBehind: tl.blurBehind ? { ...tl.blurBehind, spread: parseInt(e.target.value) } : undefined
                 })}
                 className="w-full"
               />
@@ -982,7 +982,7 @@ export default function EditorPage({ params }: { params: { generationId: string 
                 max="100"
                 value={tl.blurBehind.fade}
                 onChange={(e) => updateLayer(tl.id, { 
-                  blurBehind: { ...tl.blurBehind, fade: parseInt(e.target.value) }
+                  blurBehind: tl.blurBehind ? { ...tl.blurBehind, fade: parseInt(e.target.value) } : undefined
                 })}
                 className="w-full"
               />
