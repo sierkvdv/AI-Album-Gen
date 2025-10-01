@@ -700,8 +700,12 @@ export default function EditorPage({ params }: { params: { generationId: string 
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
       
-      // Start with transparent canvas
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // Start with white canvas (fully visible)
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // Always set the context reference
+      maskCtxRef.current = ctx;
       
       const layer = project.layers.find((l) => l.id === layerId) as Layer | undefined;
       if (layer?.mask) {
@@ -710,10 +714,11 @@ export default function EditorPage({ params }: { params: { generationId: string 
         img.onload = () => {
           // Draw existing mask scaled to canvas size
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          maskCtxRef.current = ctx;
         };
       } else {
-        maskCtxRef.current = ctx;
+        // Start with white background (fully visible)
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
       }
     }, 0);
   }
