@@ -371,7 +371,7 @@ export default function EditorPage({ params }: { params: { generationId: string 
           img.src = generation.imageUrl;
           await img.decode();
           proj = {
-            id: generationId,
+            id: `proj_${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${Math.random().toString(36).substr(2, 9)}`,
             baseAssetUrl: generation.imageUrl,
             baseWidth: img.naturalWidth,
             baseHeight: img.naturalHeight,

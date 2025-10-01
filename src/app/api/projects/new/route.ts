@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
 
     // Create default project data if not provided
     const defaultProject = {
-      id: `proj_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: `proj_${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${Math.random().toString(36).substr(2, 9)}`,
       baseAssetUrl: generation.imageUrl,
       baseWidth: 1024, // Default width
       baseHeight: 1024, // Default height
@@ -60,7 +60,11 @@ export async function POST(request: NextRequest) {
       layers: [] // No additional layers
     };
 
-    const projectData = project || defaultProject;
+    // Use provided project data but ensure unique ID
+    const projectData = project ? {
+      ...project,
+      id: project.id || `proj_${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${Math.random().toString(36).substr(2, 9)}`
+    } : defaultProject;
     console.log('Projects API: Using project data:', projectData);
 
     // Create the project
