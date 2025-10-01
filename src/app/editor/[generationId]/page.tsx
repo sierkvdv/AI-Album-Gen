@@ -333,7 +333,7 @@ export default function EditorPage({ params }: { params: { generationId: string 
   const [project, setProject] = useState<ProjectState | null>(null);
   const [image, setImage] = useState<HTMLImageElement | null>(null);
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
-  const [customFonts, setCustomFonts] = useState<{ name: string; family: string }[]>([]);
+  const [customFonts, setCustomFonts] = useState<{ name: string; family: string; category: string }[]>([]);
   const [editingNameId, setEditingNameId] = useState<string | null>(null);
   // Drag info for moving layers
   const containerRef = useRef<HTMLDivElement>(null);
@@ -722,7 +722,7 @@ export default function EditorPage({ params }: { params: { generationId: string 
                     }
                   `;
                   document.head.appendChild(style);
-                  setCustomFonts([...customFonts, { name: fontName, family: fontFamily }]);
+                  setCustomFonts([...customFonts, { name: fontName, family: fontFamily, category: 'Custom' }]);
                   updateLayer(tl.id, { fontFamily: fontFamily });
                 };
                 reader.readAsDataURL(file);
