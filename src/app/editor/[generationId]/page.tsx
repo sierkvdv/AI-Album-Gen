@@ -618,12 +618,20 @@ export default function EditorPage({ params }: { params: { generationId: string 
       canvas.height = project.baseHeight;
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
+      
+      // Set up canvas for better mask editing
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Start with a white background (fully visible)
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
       const layer = project.layers.find((l) => l.id === layerId) as Layer | undefined;
       if (layer?.mask) {
         const img = new Image();
         img.src = layer.mask;
         img.onload = () => {
+          // Draw existing mask
           ctx.drawImage(img, 0, 0);
           maskCtxRef.current = ctx;
         };
@@ -646,9 +654,17 @@ export default function EditorPage({ params }: { params: { generationId: string 
     const ctx = maskCtxRef.current;
     const containerRect = containerRef.current?.getBoundingClientRect();
     if (!canvas || !ctx || !containerRect) return;
+    
+    // Only draw on pointer down or when dragging
+    if (e.type === 'pointermove' && e.buttons === 0) return;
+    
     const x = ((e.clientX - containerRect.left) * project!.baseWidth) / containerRect.width;
     const y = ((e.clientY - containerRect.top) * project!.baseHeight) / containerRect.height;
-    ctx.fillStyle = maskMode === 'erase' ? 'black' : 'white';
+    
+    ctx.globalCompositeOperation = maskMode === 'erase' ? 'destination-out' : 'source-over';
+    ctx.fillStyle = maskMode === 'erase' ? 'rgba(0,0,0,1)' : 'rgba(255,255,255,1)';
+    ctx.globalAlpha = 1;
+    
     const radius = maskBrushSize / 2;
     ctx.beginPath();
     ctx.arc(x, y, radius, 0, Math.PI * 2);
@@ -1034,7 +1050,11 @@ export default function EditorPage({ params }: { params: { generationId: string 
             {maskEditingLayerId && (
               <canvas
                 ref={maskCanvasRef}
-                className="absolute inset-0 z-10 touch-none"
+                className="absolute inset-0 z-10 touch-none cursor-crosshair"
+                style={{ 
+                  background: 'rgba(0,0,0,0.3)',
+                  mixBlendMode: 'multiply'
+                }}
                 onPointerDown={handleMaskDraw}
                 onPointerMove={handleMaskDraw}
               />
@@ -1063,11 +1083,14 @@ export default function EditorPage({ params }: { params: { generationId: string 
           {maskEditingLayerId && (
             <div className="p-4 border rounded bg-gray-50 mt-4 space-y-2">
               <h3 className="font-semibold">Masking</h3>
+              <p className="text-sm text-gray-600">
+                Zwart = verborgen, Wit = zichtbaar. Sleep om te maskeren.
+              </p>
               <div className="flex items-center space-x-2">
                 <label>Mode</label>
                 <select value={maskMode} onChange={(e) => setMaskMode(e.target.value as any)}>
-                  <option value="erase">Erase</option>
-                  <option value="restore">Restore</option>
+                  <option value="erase">Verbergen (zwart)</option>
+                  <option value="restore">Tonen (wit)</option>
                 </select>
                 <label>Brush size</label>
                 <input
@@ -1077,6 +1100,7 @@ export default function EditorPage({ params }: { params: { generationId: string 
                   value={maskBrushSize}
                   onChange={(e) => setMaskBrushSize(parseInt(e.target.value))}
                 />
+                <span className="text-sm">{maskBrushSize}px</span>
               </div>
               <div className="flex space-x-2">
                 <button onClick={resetMask} className="px-2 py-1 bg-gray-200 rounded">
