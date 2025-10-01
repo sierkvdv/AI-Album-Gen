@@ -690,9 +690,12 @@ export default function EditorPage({ params }: { params: { generationId: string 
       const canvas = maskCanvasRef.current;
       if (!canvas || !project) return;
       
-      // Set canvas dimensions for layer-relative positioning
-      canvas.width = 200;
-      canvas.height = 200;
+      // Set canvas dimensions to match container
+      const containerRect = containerRef.current?.getBoundingClientRect();
+      if (!containerRect) return;
+      
+      canvas.width = containerRect.width;
+      canvas.height = containerRect.height;
       
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
@@ -705,17 +708,8 @@ export default function EditorPage({ params }: { params: { generationId: string 
         const img = new Image();
         img.src = layer.mask;
         img.onload = () => {
-          // Draw existing mask at layer position on canvas
-          const maskSize = 200;
-          const sourceX = layer.x - maskSize/2;
-          const sourceY = layer.y - maskSize/2;
-          const sourceSize = maskSize;
-          
-          // Extract the mask area around the layer position
-          ctx.drawImage(img, 
-            sourceX, sourceY, sourceSize, sourceSize,
-            0, 0, canvas.width, canvas.height
-          );
+          // Draw existing mask scaled to canvas size
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
           maskCtxRef.current = ctx;
         };
       } else {
@@ -747,17 +741,9 @@ export default function EditorPage({ params }: { params: { generationId: string 
     // Only draw on pointer down or when dragging
     if (e.type === 'pointermove' && e.buttons === 0) return;
     
-    // Get layer position for relative coordinates
-    const layer = project.layers.find(l => l.id === maskEditingLayerId);
-    if (!layer) return;
-    
-    // Calculate layer position in container coordinates
-    const layerX = (layer.x / project.baseWidth) * containerRect.width;
-    const layerY = (layer.y / project.baseHeight) * containerRect.height;
-    
-    // Convert to canvas coordinates (canvas is 200x200, centered on layer)
-    const x = (e.clientX - containerRect.left - layerX + 100) * (200 / 200);
-    const y = (e.clientY - containerRect.top - layerY + 100) * (200 / 200);
+    // Use direct canvas coordinates since canvas matches container
+    const x = e.clientX - containerRect.left;
+    const y = e.clientY - containerRect.top;
     
     // Draw black or white on the mask canvas
     ctx.fillStyle = maskMode === 'erase' ? 'black' : 'white';
@@ -774,19 +760,8 @@ export default function EditorPage({ params }: { params: { generationId: string 
     scaledCanvas.height = project.baseHeight;
     const scaledCtx = scaledCanvas.getContext('2d');
     if (scaledCtx) {
-      // Calculate where to draw the mask on the scaled canvas
-      const layerX = layer.x;
-      const layerY = layer.y;
-      const maskSize = 200; // Canvas size
-      
-      // Draw the mask canvas at the layer position
-      scaledCtx.drawImage(canvas, 
-        layerX - maskSize/2, 
-        layerY - maskSize/2, 
-        maskSize, 
-        maskSize
-      );
-      
+      // Draw the mask canvas scaled to project dimensions
+      scaledCtx.drawImage(canvas, 0, 0, project.baseWidth, project.baseHeight);
       const dataUrl = scaledCanvas.toDataURL('image/png');
       console.log('Mask updated:', {
         layerId: maskEditingLayerId,
@@ -808,22 +783,13 @@ export default function EditorPage({ params }: { params: { generationId: string 
     
     // Update mask in real-time after reset - scale to project dimensions
     if (project) {
-      const layer = project.layers.find(l => l.id === maskEditingLayerId);
-      if (layer) {
-        const scaledCanvas = document.createElement('canvas');
-        scaledCanvas.width = project.baseWidth;
-        scaledCanvas.height = project.baseHeight;
-        const scaledCtx = scaledCanvas.getContext('2d');
-        if (scaledCtx) {
-          const maskSize = 200;
-          scaledCtx.drawImage(canvas, 
-            layer.x - maskSize/2, 
-            layer.y - maskSize/2, 
-            maskSize, 
-            maskSize
-          );
-          updateLayer(maskEditingLayerId, { mask: scaledCanvas.toDataURL('image/png') });
-        }
+      const scaledCanvas = document.createElement('canvas');
+      scaledCanvas.width = project.baseWidth;
+      scaledCanvas.height = project.baseHeight;
+      const scaledCtx = scaledCanvas.getContext('2d');
+      if (scaledCtx) {
+        scaledCtx.drawImage(canvas, 0, 0, project.baseWidth, project.baseHeight);
+        updateLayer(maskEditingLayerId, { mask: scaledCanvas.toDataURL('image/png') });
       }
     }
   }
@@ -844,22 +810,13 @@ export default function EditorPage({ params }: { params: { generationId: string 
     
     // Update mask in real-time after inversion - scale to project dimensions
     if (project) {
-      const layer = project.layers.find(l => l.id === maskEditingLayerId);
-      if (layer) {
-        const scaledCanvas = document.createElement('canvas');
-        scaledCanvas.width = project.baseWidth;
-        scaledCanvas.height = project.baseHeight;
-        const scaledCtx = scaledCanvas.getContext('2d');
-        if (scaledCtx) {
-          const maskSize = 200;
-          scaledCtx.drawImage(canvas, 
-            layer.x - maskSize/2, 
-            layer.y - maskSize/2, 
-            maskSize, 
-            maskSize
-          );
-          updateLayer(maskEditingLayerId, { mask: scaledCanvas.toDataURL('image/png') });
-        }
+      const scaledCanvas = document.createElement('canvas');
+      scaledCanvas.width = project.baseWidth;
+      scaledCanvas.height = project.baseHeight;
+      const scaledCtx = scaledCanvas.getContext('2d');
+      if (scaledCtx) {
+        scaledCtx.drawImage(canvas, 0, 0, project.baseWidth, project.baseHeight);
+        updateLayer(maskEditingLayerId, { mask: scaledCanvas.toDataURL('image/png') });
       }
     }
   }
@@ -1288,13 +1245,15 @@ export default function EditorPage({ params }: { params: { generationId: string 
               dragInfo.current = null;
             }}
           >
-            {/* Base image with filters */}
-            <img
-              src={project.baseAssetUrl}
-              alt="Base"
-              className="absolute inset-0 w-full h-full object-cover"
-              style={{ filter: computeCssFilters(project.filters) }}
-            />
+            {/* Base image with filters - only show if no image layers exist */}
+            {!project.layers.some(l => l.type === 'image') && (
+              <img
+                src={project.baseAssetUrl}
+                alt="Base"
+                className="absolute inset-0 w-full h-full object-cover"
+                style={{ filter: computeCssFilters(project.filters) }}
+              />
+            )}
             {/* Image & text layers */}
             {project.layers.map((layer) => {
               if (!layer.visible) return null;
@@ -1394,6 +1353,8 @@ export default function EditorPage({ params }: { params: { generationId: string 
                     className={`absolute select-none ${isSelected ? 'ring-2 ring-blue-500' : ''}`}
                     style={{
                       ...style,
+                      // Apply filters to image layer
+                      filter: computeCssFilters(project.filters),
                       // Apply mask to image layer
                       ...(il.mask && {
                         maskImage: `url(${il.mask})`,
@@ -1445,18 +1406,13 @@ export default function EditorPage({ params }: { params: { generationId: string 
                       backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px'
                     }}
                   />
-                  {/* Drawing canvas positioned relative to the layer */}
+                  {/* Drawing canvas - full container size */}
                   <canvas
                     ref={maskCanvasRef}
-                    className="absolute touch-none cursor-crosshair"
+                    className="absolute inset-0 touch-none cursor-crosshair"
                     style={{ 
                       background: 'transparent',
-                      pointerEvents: 'auto',
-                      left: `${(layer.x / project.baseWidth) * 100}%`,
-                      top: `${(layer.y / project.baseHeight) * 100}%`,
-                      transform: `translate(-50%, -50%)`,
-                      width: '200px',
-                      height: '200px'
+                      pointerEvents: 'auto'
                     }}
                     onPointerDown={handleMaskDraw}
                     onPointerMove={handleMaskDraw}
