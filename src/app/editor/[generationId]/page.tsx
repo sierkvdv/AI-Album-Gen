@@ -690,9 +690,12 @@ export default function EditorPage({ params }: { params: { generationId: string 
       const canvas = maskCanvasRef.current;
       if (!canvas || !project) return;
       
-      // Set canvas dimensions to match project dimensions for 1:1 correspondence
-      canvas.width = project.baseWidth;
-      canvas.height = project.baseHeight;
+      // Set canvas dimensions to match container for proper positioning
+      const containerRect = containerRef.current?.getBoundingClientRect();
+      if (!containerRect) return;
+      
+      canvas.width = containerRect.width;
+      canvas.height = containerRect.height;
       canvas.style.width = '100%';
       canvas.style.height = '100%';
       
@@ -707,8 +710,8 @@ export default function EditorPage({ params }: { params: { generationId: string 
         const img = new Image();
         img.src = layer.mask;
         img.onload = () => {
-          // Draw existing mask at full resolution
-          ctx.drawImage(img, 0, 0);
+          // Draw existing mask scaled to canvas size
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
           maskCtxRef.current = ctx;
         };
       } else {
@@ -740,9 +743,9 @@ export default function EditorPage({ params }: { params: { generationId: string 
     // Only draw on pointer down or when dragging
     if (e.type === 'pointermove' && e.buttons === 0) return;
     
-    // Map container coordinates to canvas coordinates (1:1 correspondence)
-    const x = ((e.clientX - containerRect.left) * project.baseWidth) / containerRect.width;
-    const y = ((e.clientY - containerRect.top) * project.baseHeight) / containerRect.height;
+    // Use direct canvas coordinates since canvas now matches container
+    const x = e.clientX - containerRect.left;
+    const y = e.clientY - containerRect.top;
     
     // Draw black or white on the mask canvas
     ctx.fillStyle = maskMode === 'erase' ? 'black' : 'white';
@@ -753,17 +756,24 @@ export default function EditorPage({ params }: { params: { generationId: string 
     ctx.arc(x, y, radius, 0, Math.PI * 2);
     ctx.fill();
     
-    // Save mask in real-time with debug logging
-    const dataUrl = canvas.toDataURL('image/png');
-    console.log('Mask updated:', {
-      layerId: maskEditingLayerId,
-      mode: maskMode,
-      position: { x, y },
-      brushSize: maskBrushSize,
-      dataUrlLength: dataUrl.length
-    });
-    
-    updateLayer(maskEditingLayerId, { mask: dataUrl });
+    // Save mask in real-time - scale to project dimensions
+    const scaledCanvas = document.createElement('canvas');
+    scaledCanvas.width = project.baseWidth;
+    scaledCanvas.height = project.baseHeight;
+    const scaledCtx = scaledCanvas.getContext('2d');
+    if (scaledCtx) {
+      // Draw the mask canvas scaled to project dimensions
+      scaledCtx.drawImage(canvas, 0, 0, project.baseWidth, project.baseHeight);
+      const dataUrl = scaledCanvas.toDataURL('image/png');
+      console.log('Mask updated:', {
+        layerId: maskEditingLayerId,
+        mode: maskMode,
+        position: { x, y },
+        brushSize: maskBrushSize,
+        dataUrlLength: dataUrl.length
+      });
+      updateLayer(maskEditingLayerId, { mask: dataUrl });
+    }
   }
   function resetMask() {
     const ctx = maskCtxRef.current;
@@ -773,8 +783,17 @@ export default function EditorPage({ params }: { params: { generationId: string 
     // Clear canvas (transparent = fully visible)
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Update mask in real-time after reset
-    updateLayer(maskEditingLayerId, { mask: canvas.toDataURL('image/png') });
+    // Update mask in real-time after reset - scale to project dimensions
+    if (project) {
+      const scaledCanvas = document.createElement('canvas');
+      scaledCanvas.width = project.baseWidth;
+      scaledCanvas.height = project.baseHeight;
+      const scaledCtx = scaledCanvas.getContext('2d');
+      if (scaledCtx) {
+        scaledCtx.drawImage(canvas, 0, 0, project.baseWidth, project.baseHeight);
+        updateLayer(maskEditingLayerId, { mask: scaledCanvas.toDataURL('image/png') });
+      }
+    }
   }
   function invertMask() {
     const ctx = maskCtxRef.current;
@@ -791,8 +810,17 @@ export default function EditorPage({ params }: { params: { generationId: string 
     }
     ctx.putImageData(data, 0, 0);
     
-    // Update mask in real-time after inversion
-    updateLayer(maskEditingLayerId, { mask: canvas.toDataURL('image/png') });
+    // Update mask in real-time after inversion - scale to project dimensions
+    if (project) {
+      const scaledCanvas = document.createElement('canvas');
+      scaledCanvas.width = project.baseWidth;
+      scaledCanvas.height = project.baseHeight;
+      const scaledCtx = scaledCanvas.getContext('2d');
+      if (scaledCtx) {
+        scaledCtx.drawImage(canvas, 0, 0, project.baseWidth, project.baseHeight);
+        updateLayer(maskEditingLayerId, { mask: scaledCanvas.toDataURL('image/png') });
+      }
+    }
   }
 
 
@@ -1219,6 +1247,13 @@ export default function EditorPage({ params }: { params: { generationId: string 
               dragInfo.current = null;
             }}
           >
+            {/* Base image with filters */}
+            <img
+              src={project.baseAssetUrl}
+              alt="Base"
+              className="absolute inset-0 w-full h-full object-cover"
+              style={{ filter: computeCssFilters(project.filters) }}
+            />
             {/* Image & text layers */}
             {project.layers.map((layer) => {
               if (!layer.visible) return null;
@@ -1300,8 +1335,8 @@ export default function EditorPage({ params }: { params: { generationId: string 
                           WebkitMaskSize: '100% 100%',
                           maskRepeat: 'no-repeat',
                           WebkitMaskRepeat: 'no-repeat',
-                          maskPosition: 'center',
-                          WebkitMaskPosition: 'center',
+                          maskPosition: '50% 50%',
+                          WebkitMaskPosition: '50% 50%',
                         };
                       })()),
                     }}
@@ -1326,8 +1361,8 @@ export default function EditorPage({ params }: { params: { generationId: string 
                         WebkitMaskSize: '100% 100%',
                         maskRepeat: 'no-repeat',
                         WebkitMaskRepeat: 'no-repeat',
-                        maskPosition: 'center',
-                        WebkitMaskPosition: 'center',
+                        maskPosition: '50% 50%',
+                        WebkitMaskPosition: '50% 50%',
                       }),
                     }}
                     onPointerDown={(e) => {
