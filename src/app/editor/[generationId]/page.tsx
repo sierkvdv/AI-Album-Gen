@@ -1384,6 +1384,8 @@ export default function EditorPage({ params }: { params: { generationId: string 
                       ...(tl.mask && {
                         WebkitMask: `url(${tl.mask}) no-repeat center/100% 100%`,
                         mask: `url(${tl.mask}) no-repeat center/100% 100%`,
+                        WebkitMaskType: 'luminance',
+                        maskType: 'luminance',
                       }),
                     }}
                   >
@@ -1405,6 +1407,8 @@ export default function EditorPage({ params }: { params: { generationId: string 
                       ...(il.mask && {
                         WebkitMask: `url(${il.mask}) no-repeat center/100% 100%`,
                         mask: `url(${il.mask}) no-repeat center/100% 100%`,
+                        WebkitMaskType: 'luminance',
+                        maskType: 'luminance',
                       }),
                     }}
                     onPointerDown={(e) => {
