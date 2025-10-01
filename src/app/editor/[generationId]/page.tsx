@@ -713,8 +713,17 @@ export default function EditorPage({ params }: { params: { generationId: string 
     ctx.arc(x, y, radius, 0, Math.PI * 2);
     ctx.fill();
     
-    // Save mask in real-time
-    updateLayer(maskEditingLayerId, { mask: canvas.toDataURL('image/png') });
+    // Save mask in real-time with debug logging
+    const dataUrl = canvas.toDataURL('image/png');
+    console.log('Mask updated:', {
+      layerId: maskEditingLayerId,
+      mode: maskMode,
+      position: { x, y },
+      brushSize: maskBrushSize,
+      dataUrlLength: dataUrl.length
+    });
+    
+    updateLayer(maskEditingLayerId, { mask: dataUrl });
   }
   function resetMask() {
     const ctx = maskCtxRef.current;
@@ -1245,12 +1254,23 @@ export default function EditorPage({ params }: { params: { generationId: string 
                         margin: `-${tl.blurBehind.spread}px`,
                       }),
                       // CSS mask for text masking
-                      maskImage: tl.mask ? `url(${tl.mask})` : undefined,
-                      WebkitMaskImage: tl.mask ? `url(${tl.mask})` : undefined,
-                      maskSize: '100% 100%',
-                      WebkitMaskSize: '100% 100%',
-                      maskRepeat: 'no-repeat',
-                      WebkitMaskRepeat: 'no-repeat',
+                      ...(tl.mask && (() => {
+                        console.log('Applying mask to text layer:', {
+                          layerId: tl.id,
+                          maskLength: tl.mask.length,
+                          maskPreview: tl.mask.substring(0, 50) + '...'
+                        });
+                        return {
+                          maskImage: `url(${tl.mask})`,
+                          WebkitMaskImage: `url(${tl.mask})`,
+                          maskSize: '100% 100%',
+                          WebkitMaskSize: '100% 100%',
+                          maskRepeat: 'no-repeat',
+                          WebkitMaskRepeat: 'no-repeat',
+                          maskPosition: 'center',
+                          WebkitMaskPosition: 'center',
+                        };
+                      })()),
                     }}
                   >
                     {tl.text}
