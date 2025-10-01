@@ -789,6 +789,130 @@ export default function EditorPage({ params }: { params: { generationId: string 
     }
   }
 
+  // Helper function to create masked text element
+  function createMaskedTextElement(layer: TextLayer, maskDataUrl: string) {
+    return (
+      <div
+        key={`masked-${layer.id}`}
+        style={{
+          position: 'absolute',
+          left: `${(layer.x / project!.baseWidth) * 100}%`,
+          top: `${(layer.y / project!.baseHeight) * 100}%`,
+          transform: `translate(-50%, -50%) rotate(${layer.rotation}deg) scale(${layer.scale})`,
+          opacity: layer.opacity,
+          zIndex: layer.zIndex,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+        }}
+      >
+        <canvas
+          width={project!.baseWidth}
+          height={project!.baseHeight}
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'contain',
+          }}
+          ref={(canvas) => {
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw text
+            ctx.font = `${layer.italic ? 'italic ' : ''}${layer.fontWeight} ${layer.fontSize}px ${layer.fontFamily}`;
+            ctx.fillStyle = layer.color;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            // Apply mask
+            if (maskDataUrl) {
+              const maskImg = new Image();
+              maskImg.onload = () => {
+                // Create a temporary canvas for the mask
+                const maskCanvas = document.createElement('canvas');
+                maskCanvas.width = canvas.width;
+                maskCanvas.height = canvas.height;
+                const maskCtx = maskCanvas.getContext('2d');
+                if (!maskCtx) return;
+                
+                // Draw mask
+                maskCtx.drawImage(maskImg, 0, 0, canvas.width, canvas.height);
+                const maskData = maskCtx.getImageData(0, 0, canvas.width, canvas.height);
+                
+                // Draw text with mask
+                const textLines = layer.text.split('\n');
+                let yPos = canvas.height / 2 - (textLines.length - 1) * (layer.fontSize * layer.lineHeight) / 2;
+                
+                for (const line of textLines) {
+                  const text = layer.uppercase ? line.toUpperCase() : line;
+                  
+                  // Get text metrics
+                  const metrics = ctx.measureText(text);
+                  const textWidth = metrics.width;
+                  const textHeight = layer.fontSize;
+                  
+                  // Create text canvas
+                  const textCanvas = document.createElement('canvas');
+                  textCanvas.width = textWidth + 20;
+                  textCanvas.height = textHeight + 20;
+                  const textCtx = textCanvas.getContext('2d');
+                  if (!textCtx) continue;
+                  
+                  textCtx.font = ctx.font;
+                  textCtx.fillStyle = layer.color;
+                  textCtx.textAlign = 'center';
+                  textCtx.textBaseline = 'middle';
+                  textCtx.fillText(text, textCanvas.width / 2, textCanvas.height / 2);
+                  
+                  // Apply mask to text
+                  const textData = textCtx.getImageData(0, 0, textCanvas.width, textCanvas.height);
+                  const startX = Math.max(0, Math.floor(canvas.width / 2 - textWidth / 2));
+                  const startY = Math.max(0, Math.floor(yPos - textHeight / 2));
+                  
+                  for (let y = 0; y < textData.height; y++) {
+                    for (let x = 0; x < textData.width; x++) {
+                      const textIndex = (y * textData.width + x) * 4;
+                      const maskX = startX + x;
+                      const maskY = startY + y;
+                      
+                      if (maskX >= 0 && maskX < canvas.width && maskY >= 0 && maskY < canvas.height) {
+                        const maskIndex = (maskY * canvas.width + maskX) * 4;
+                        const maskAlpha = maskData.data[maskIndex + 3];
+                        
+                        // Apply mask alpha to text
+                        textData.data[textIndex + 3] = (textData.data[textIndex + 3] * maskAlpha) / 255;
+                      }
+                    }
+                  }
+                  
+                  textCtx.putImageData(textData, 0, 0);
+                  ctx.drawImage(textCanvas, startX, startY);
+                  
+                  yPos += layer.fontSize * layer.lineHeight;
+                }
+              };
+              maskImg.src = maskDataUrl;
+            } else {
+              // No mask, draw text normally
+              const textLines = layer.text.split('\n');
+              let yPos = canvas.height / 2 - (textLines.length - 1) * (layer.fontSize * layer.lineHeight) / 2;
+              
+              for (const line of textLines) {
+                const text = layer.uppercase ? line.toUpperCase() : line;
+                ctx.fillText(text, canvas.width / 2, yPos);
+                yPos += layer.fontSize * layer.lineHeight;
+              }
+            }
+          }}
+        />
+      </div>
+    );
+  }
+
   // UI rendering helpers for layer controls, filters, mask controls, etc.
   function renderLayerControls() {
     if (!project || !selectedLayerId) return null;
@@ -1074,10 +1198,19 @@ export default function EditorPage({ params }: { params: { generationId: string 
                 top: `${(layer.y / project.baseHeight) * 100}%`,
                 transform: `translate(-50%, -50%) rotate(${layer.rotation}deg) scale(${layer.scale})`,
                 opacity: layer.opacity,
-                // Mask wordt nu direct op de tekst div toegepast
-              } as any;
+                zIndex: layer.zIndex,
+                position: 'absolute' as const,
+                pointerEvents: isSelected ? 'auto' : 'none',
+              };
               if (layer.type === 'text') {
                 const tl = layer as TextLayer;
+                
+                // If layer has a mask, use canvas-based rendering
+                if (layer.mask) {
+                  return createMaskedTextElement(tl, layer.mask);
+                }
+                
+                // Otherwise use normal div rendering
                 return (
                   <div
                     key={layer.id}
@@ -1121,11 +1254,6 @@ export default function EditorPage({ params }: { params: { generationId: string 
                       WebkitTextStrokeColor: tl.outline ? tl.outline.color : undefined,
                       backdropFilter: tl.blurBehind ? 'blur(4px)' : undefined,
                       WebkitBackdropFilter: tl.blurBehind ? 'blur(4px)' : undefined,
-                      mask: layer.mask ? (() => {
-                        console.log('Applying mask to layer:', layer.id, 'mask length:', layer.mask.length);
-                        return `url(${layer.mask}) no-repeat center/cover`;
-                      })() : undefined,
-                      WebkitMask: layer.mask ? `url(${layer.mask}) no-repeat center/cover` : undefined,
                     }}
                   >
                     {tl.text}
@@ -1165,12 +1293,13 @@ export default function EditorPage({ params }: { params: { generationId: string 
             {/* Mask editing overlay */}
             {maskEditingLayerId && (
               <div className="absolute inset-0 z-10">
-                {/* Semi-transparent overlay to show what will be masked */}
+                {/* Show current mask as overlay */}
                 <div 
-                  className="absolute inset-0 bg-black bg-opacity-30"
+                  className="absolute inset-0 bg-red-500 bg-opacity-20"
                   style={{
-                    mask: `url(${project.layers.find(l => l.id === maskEditingLayerId)?.mask || 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='}) no-repeat center/cover`,
-                    WebkitMask: `url(${project.layers.find(l => l.id === maskEditingLayerId)?.mask || 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='}) no-repeat center/cover`
+                    background: 'linear-gradient(45deg, rgba(255,0,0,0.1) 25%, transparent 25%), linear-gradient(-45deg, rgba(255,0,0,0.1) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, rgba(255,0,0,0.1) 75%), linear-gradient(-45deg, transparent 75%, rgba(255,0,0,0.1) 75%)',
+                    backgroundSize: '20px 20px',
+                    backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px'
                   }}
                 />
                 {/* Drawing canvas */}
@@ -1184,6 +1313,12 @@ export default function EditorPage({ params }: { params: { generationId: string 
                   onPointerDown={handleMaskDraw}
                   onPointerMove={handleMaskDraw}
                 />
+                {/* Instructions */}
+                <div className="absolute top-4 left-4 bg-black bg-opacity-75 text-white p-2 rounded text-sm">
+                  <div>Mask Mode: {maskMode === 'erase' ? 'Verbergen (zwart)' : 'Tonen (wit)'}</div>
+                  <div>Brush Size: {maskBrushSize}px</div>
+                  <div>Zwart = verborgen, Wit = zichtbaar</div>
+                </div>
               </div>
             )}
           </div>
