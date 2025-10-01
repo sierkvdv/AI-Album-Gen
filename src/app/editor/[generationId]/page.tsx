@@ -641,10 +641,16 @@ export default function EditorPage({ params }: { params: { generationId: string 
     setTimeout(() => {
       const canvas = maskCanvasRef.current;
       if (!canvas || !project) return;
-      canvas.width = project.baseWidth;
-      canvas.height = project.baseHeight;
-      canvas.style.width = `${project.baseWidth}px`;
-      canvas.style.height = `${project.baseHeight}px`;
+      
+      // Set canvas dimensions to match the container, not the project dimensions
+      const containerRect = containerRef.current?.getBoundingClientRect();
+      if (!containerRect) return;
+      
+      canvas.width = containerRect.width;
+      canvas.height = containerRect.height;
+      canvas.style.width = '100%';
+      canvas.style.height = '100%';
+      
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
       
@@ -660,8 +666,8 @@ export default function EditorPage({ params }: { params: { generationId: string 
         const img = new Image();
         img.src = layer.mask;
         img.onload = () => {
-          // Draw existing mask
-          ctx.drawImage(img, 0, 0);
+          // Draw existing mask scaled to canvas size
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
           maskCtxRef.current = ctx;
         };
       } else {
@@ -673,7 +679,18 @@ export default function EditorPage({ params }: { params: { generationId: string 
     if (!maskEditingLayerId || !project) return;
     const canvas = maskCanvasRef.current;
     if (!canvas) return;
-    const dataUrl = canvas.toDataURL('image/png');
+    
+    // Create a new canvas with project dimensions and scale the mask
+    const scaledCanvas = document.createElement('canvas');
+    scaledCanvas.width = project.baseWidth;
+    scaledCanvas.height = project.baseHeight;
+    const scaledCtx = scaledCanvas.getContext('2d');
+    if (!scaledCtx) return;
+    
+    // Draw the mask scaled to project dimensions
+    scaledCtx.drawImage(canvas, 0, 0, project.baseWidth, project.baseHeight);
+    const dataUrl = scaledCanvas.toDataURL('image/png');
+    
     updateLayer(maskEditingLayerId, { mask: dataUrl });
     setMaskEditingLayerId(null);
   }
@@ -687,8 +704,9 @@ export default function EditorPage({ params }: { params: { generationId: string 
     // Only draw on pointer down or when dragging
     if (e.type === 'pointermove' && e.buttons === 0) return;
     
-    const x = ((e.clientX - containerRect.left) * project!.baseWidth) / containerRect.width;
-    const y = ((e.clientY - containerRect.top) * project!.baseHeight) / containerRect.height;
+    // Use direct canvas coordinates (no scaling needed since canvas matches container)
+    const x = e.clientX - containerRect.left;
+    const y = e.clientY - containerRect.top;
     
     // Correct mask logic: white = show content, black = hide content
     ctx.globalCompositeOperation = 'source-over';
@@ -702,31 +720,49 @@ export default function EditorPage({ params }: { params: { generationId: string 
     ctx.fill();
     
     // Update mask in real-time after each brush stroke
-    if (maskEditingLayerId) {
-      const dataUrl = canvas.toDataURL('image/png');
-      updateLayer(maskEditingLayerId, { mask: dataUrl });
+    if (maskEditingLayerId && project) {
+      // Create a scaled version for the layer
+      const scaledCanvas = document.createElement('canvas');
+      scaledCanvas.width = project.baseWidth;
+      scaledCanvas.height = project.baseHeight;
+      const scaledCtx = scaledCanvas.getContext('2d');
+      if (scaledCtx) {
+        scaledCtx.drawImage(canvas, 0, 0, project.baseWidth, project.baseHeight);
+        const dataUrl = scaledCanvas.toDataURL('image/png');
+        updateLayer(maskEditingLayerId, { mask: dataUrl });
+      }
     }
   }
   function resetMask() {
     const ctx = maskCtxRef.current;
-    if (!ctx || !project || !maskEditingLayerId) return;
-    ctx.clearRect(0, 0, project.baseWidth, project.baseHeight);
+    const canvas = maskCanvasRef.current;
+    if (!ctx || !canvas || !maskEditingLayerId) return;
+    
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     
     // Fill with white (fully visible)
     ctx.fillStyle = 'white';
-    ctx.fillRect(0, 0, project.baseWidth, project.baseHeight);
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
     
     // Update mask in real-time after reset
-    const canvas = maskCanvasRef.current;
-    if (canvas) {
-      const dataUrl = canvas.toDataURL('image/png');
-      updateLayer(maskEditingLayerId, { mask: dataUrl });
+    if (project) {
+      const scaledCanvas = document.createElement('canvas');
+      scaledCanvas.width = project.baseWidth;
+      scaledCanvas.height = project.baseHeight;
+      const scaledCtx = scaledCanvas.getContext('2d');
+      if (scaledCtx) {
+        scaledCtx.drawImage(canvas, 0, 0, project.baseWidth, project.baseHeight);
+        const dataUrl = scaledCanvas.toDataURL('image/png');
+        updateLayer(maskEditingLayerId, { mask: dataUrl });
+      }
     }
   }
   function invertMask() {
     const ctx = maskCtxRef.current;
-    if (!ctx || !project || !maskEditingLayerId) return;
-    const data = ctx.getImageData(0, 0, project.baseWidth, project.baseHeight);
+    const canvas = maskCanvasRef.current;
+    if (!ctx || !canvas || !maskEditingLayerId) return;
+    
+    const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
     for (let i = 0; i < data.data.length; i += 4) {
       // Invert only RGB channels, keep alpha unchanged
       data.data[i] = 255 - data.data[i];     // Red
@@ -737,10 +773,16 @@ export default function EditorPage({ params }: { params: { generationId: string 
     ctx.putImageData(data, 0, 0);
     
     // Update mask in real-time after inversion
-    const canvas = maskCanvasRef.current;
-    if (canvas) {
-      const dataUrl = canvas.toDataURL('image/png');
-      updateLayer(maskEditingLayerId, { mask: dataUrl });
+    if (project) {
+      const scaledCanvas = document.createElement('canvas');
+      scaledCanvas.width = project.baseWidth;
+      scaledCanvas.height = project.baseHeight;
+      const scaledCtx = scaledCanvas.getContext('2d');
+      if (scaledCtx) {
+        scaledCtx.drawImage(canvas, 0, 0, project.baseWidth, project.baseHeight);
+        const dataUrl = scaledCanvas.toDataURL('image/png');
+        updateLayer(maskEditingLayerId, { mask: dataUrl });
+      }
     }
   }
 
@@ -1118,14 +1160,10 @@ export default function EditorPage({ params }: { params: { generationId: string 
             {maskEditingLayerId && (
               <canvas
                 ref={maskCanvasRef}
-                className="absolute z-10 touch-none cursor-crosshair"
+                className="absolute inset-0 z-10 touch-none cursor-crosshair"
                 style={{ 
-                  background: 'rgba(255,0,0,0.2)',
-                  mixBlendMode: 'multiply',
-                  left: 0,
-                  top: 0,
-                  width: '100%',
-                  height: '100%'
+                  background: 'transparent',
+                  pointerEvents: 'auto'
                 }}
                 onPointerDown={handleMaskDraw}
                 onPointerMove={handleMaskDraw}
