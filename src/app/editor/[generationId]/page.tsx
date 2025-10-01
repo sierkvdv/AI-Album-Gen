@@ -1002,7 +1002,7 @@ export default function EditorPage({ params }: { params: { generationId: string 
                 max="10"
                 value={tl.outline.width}
                 onChange={(e) => updateLayer(tl.id, { 
-                  outline: { ...tl.outline, width: parseInt(e.target.value) }
+                  outline: tl.outline ? { ...tl.outline, width: parseInt(e.target.value) } : undefined
                 })}
                 className="w-full"
               />
@@ -1014,7 +1014,7 @@ export default function EditorPage({ params }: { params: { generationId: string 
                 type="color"
                 value={tl.outline.color}
                 onChange={(e) => updateLayer(tl.id, { 
-                  outline: { ...tl.outline, color: e.target.value }
+                  outline: tl.outline ? { ...tl.outline, color: e.target.value } : undefined
                 })}
                 className="w-full h-8 border rounded"
               />
@@ -1034,7 +1034,7 @@ export default function EditorPage({ params }: { params: { generationId: string 
                   max="20"
                   value={tl.shadow.offsetX}
                   onChange={(e) => updateLayer(tl.id, { 
-                    shadow: { ...tl.shadow, offsetX: parseInt(e.target.value) }
+                    shadow: tl.shadow ? { ...tl.shadow, offsetX: parseInt(e.target.value) } : undefined
                   })}
                   className="w-full"
                 />
@@ -1048,7 +1048,7 @@ export default function EditorPage({ params }: { params: { generationId: string 
                   max="20"
                   value={tl.shadow.offsetY}
                   onChange={(e) => updateLayer(tl.id, { 
-                    shadow: { ...tl.shadow, offsetY: parseInt(e.target.value) }
+                    shadow: tl.shadow ? { ...tl.shadow, offsetY: parseInt(e.target.value) } : undefined
                   })}
                   className="w-full"
                 />
@@ -1063,7 +1063,7 @@ export default function EditorPage({ params }: { params: { generationId: string 
                 max="20"
                 value={tl.shadow.blur}
                 onChange={(e) => updateLayer(tl.id, { 
-                  shadow: { ...tl.shadow, blur: parseInt(e.target.value) }
+                  shadow: tl.shadow ? { ...tl.shadow, blur: parseInt(e.target.value) } : undefined
                 })}
                 className="w-full"
               />
@@ -1075,7 +1075,7 @@ export default function EditorPage({ params }: { params: { generationId: string 
                 type="color"
                 value={tl.shadow.color}
                 onChange={(e) => updateLayer(tl.id, { 
-                  shadow: { ...tl.shadow, color: e.target.value }
+                  shadow: tl.shadow ? { ...tl.shadow, color: e.target.value } : undefined
                 })}
                 className="w-full h-8 border rounded"
               />
