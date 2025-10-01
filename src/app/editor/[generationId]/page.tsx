@@ -478,6 +478,7 @@ export default function EditorPage({ params }: { params: { generationId: string 
   // Export project to ZIP with images, overlay.svg and project.json
   async function handleExport() {
     if (!project || !image) return;
+    const currentProject = project; // Capture project to avoid null issues in nested function
     const { default: JSZip } = await import('jszip');
     const zip = new JSZip();
     async function renderToBlob(size: number, mime: 'image/png' | 'image/jpeg', quality?: number) {
@@ -485,14 +486,14 @@ export default function EditorPage({ params }: { params: { generationId: string 
       canvas.width = size;
       canvas.height = size;
       const ctx = canvas.getContext('2d')!;
-      ctx.filter = computeCssFilters(project.filters);
+      ctx.filter = computeCssFilters(currentProject.filters);
       ctx.drawImage(image, 0, 0, size, size);
       ctx.filter = 'none';
-      for (const layer of project.layers) {
+      for (const layer of currentProject.layers) {
         if (!layer.visible) continue;
         ctx.save();
-        const scaleX = size / project.baseWidth;
-        const scaleY = size / project.baseHeight;
+        const scaleX = size / currentProject.baseWidth;
+        const scaleY = size / currentProject.baseHeight;
         const x = layer.x * scaleX;
         const y = layer.y * scaleY;
         ctx.translate(x, y);
@@ -514,7 +515,7 @@ export default function EditorPage({ params }: { params: { generationId: string 
           const maskPattern = ctx.createPattern(maskCanvas, 'no-repeat')!;
           ctx.globalCompositeOperation = 'destination-in';
           ctx.fillStyle = maskPattern;
-          ctx.fillRect(-project.baseWidth / 2, -project.baseHeight / 2, project.baseWidth, project.baseHeight);
+          ctx.fillRect(-currentProject.baseWidth / 2, -currentProject.baseHeight / 2, currentProject.baseWidth, currentProject.baseHeight);
           ctx.globalCompositeOperation = 'source-over';
         }
 
@@ -527,7 +528,7 @@ export default function EditorPage({ params }: { params: { generationId: string 
         } else {
           const textLayer = layer as TextLayer;
           // Determine fill colour with auto contrast
-          const fillColor = textLayer.autoContrast ? pickAutoContrastColor(image, textLayer, project) : textLayer.color;
+          const fillColor = textLayer.autoContrast ? pickAutoContrastColor(image, textLayer, currentProject) : textLayer.color;
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
           ctx.font = `${textLayer.italic ? 'italic ' : ''}${textLayer.fontWeight} ${textLayer.fontSize}px ${textLayer.fontFamily}`;
@@ -562,7 +563,7 @@ export default function EditorPage({ params }: { params: { generationId: string 
         ctx.restore();
       }
       // After drawing all layers, apply vignette and grain
-      applyVignetteAndGrain(ctx, size, size, project.filters.vignette, project.filters.grain);
+      applyVignetteAndGrain(ctx, size, size, currentProject.filters.vignette, currentProject.filters.grain);
       return new Promise<Blob>((resolve) => {
         canvas.toBlob((blob) => {
           if (!blob) throw new Error('Failed to render');
@@ -575,17 +576,17 @@ export default function EditorPage({ params }: { params: { generationId: string 
     const thumb600 = await renderToBlob(600, 'image/jpeg', 0.8);
     // overlay.svg
     const { createOverlaySvg } = await import('@/lib/exportHelpers');
-    const overlaySvg = createOverlaySvg(project);
+    const overlaySvg = createOverlaySvg(currentProject);
     zip.file('cover_3000.png', await cover3000.arrayBuffer());
     zip.file('cover_1400.jpg', await cover1400.arrayBuffer());
     zip.file('thumb_600.jpg', await thumb600.arrayBuffer());
     zip.file('overlay.svg', overlaySvg);
-    zip.file('project.json', JSON.stringify(project, null, 2));
+    zip.file('project.json', JSON.stringify(currentProject, null, 2));
     const zipBlob = await zip.generateAsync({ type: 'blob' });
     const url = URL.createObjectURL(zipBlob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `project-${project.id}.zip`;
+    a.download = `project-${currentProject.id}.zip`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
