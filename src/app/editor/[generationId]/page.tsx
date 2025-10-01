@@ -390,6 +390,9 @@ export default function EditorPage({ params }: { params: { generationId: string 
         }
 
         // 3. Vanaf hier weet je zeker dat proj niet null is
+        if (!proj) {
+          throw new Error('Project is null after creation attempt');
+        }
         const resolvedProj: ProjectState = proj;
 
         // Laad de basisafbeelding van resolvedProj
