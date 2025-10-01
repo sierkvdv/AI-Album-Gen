@@ -773,6 +773,16 @@ export default function EditorPage({ params }: { params: { generationId: string 
     const dataUrl = canvas.toDataURL('image/png');
     updateLayer(selectedLayerId, { mask: dataUrl });
     console.log('Test mask created:', dataUrl.substring(0, 100) + '...');
+    
+    // Test if the mask data URL is valid
+    const img = new Image();
+    img.onload = () => {
+      console.log('Mask image loaded successfully, dimensions:', img.width, 'x', img.height);
+    };
+    img.onerror = () => {
+      console.error('Failed to load mask image');
+    };
+    img.src = dataUrl;
   }
   function handleMaskDraw(e: React.PointerEvent) {
     if (!maskEditingLayerId) return;
@@ -1374,14 +1384,9 @@ export default function EditorPage({ params }: { params: { generationId: string 
                           hasMask: !!tl.mask
                         });
                         return {
-                          maskImage: `url(${tl.mask})`,
-                          WebkitMaskImage: `url(${tl.mask})`,
-                          maskSize: '100% 100%',
-                          WebkitMaskSize: '100% 100%',
-                          maskRepeat: 'no-repeat',
-                          WebkitMaskRepeat: 'no-repeat',
-                          maskPosition: '50% 50%',
-                          WebkitMaskPosition: '50% 50%',
+                          // Try different mask syntax
+                          mask: `url(${tl.mask})`,
+                          WebkitMask: `url(${tl.mask})`,
                           // Add fallback for testing
                           backgroundColor: 'rgba(255,0,0,0.3)', // Red tint to see if mask is applied
                         };
@@ -1485,6 +1490,24 @@ export default function EditorPage({ params }: { params: { generationId: string 
             </button>
             <button onClick={createTestMask} className="px-3 py-1 bg-yellow-600 text-white rounded">
               Test Mask
+            </button>
+            <button onClick={() => {
+              if (selectedLayerId) {
+                const layer = project?.layers.find(l => l.id === selectedLayerId);
+                if (layer?.mask) {
+                  console.log('Current mask for layer:', layer.id);
+                  console.log('Mask data URL:', layer.mask);
+                  // Test if mask is valid
+                  const img = new Image();
+                  img.onload = () => console.log('Mask image valid, size:', img.width, 'x', img.height);
+                  img.onerror = () => console.error('Mask image invalid');
+                  img.src = layer.mask;
+                } else {
+                  console.log('No mask found for layer:', selectedLayerId);
+                }
+              }
+            }} className="px-3 py-1 bg-red-600 text-white rounded">
+              Debug Mask
             </button>
             <button onClick={handleSave} className="px-3 py-1 bg-green-600 text-white rounded">
               Save
