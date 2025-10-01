@@ -41,6 +41,8 @@ export interface LayerBase {
   /** Whether the layer is locked. Locked layers cannot be moved on the
    * canvas but can still be selected via the layer list. */
   locked: boolean;
+  /** Z-index for layer stacking order. Higher values appear on top. */
+  zIndex: number;
   /** Optional mask stored as a data URL. When present, the layer’s content
    * is clipped against this mask. White (opaque) regions of the mask show
    * the content; black (transparent) regions hide it. */
@@ -222,6 +224,7 @@ function createDefaultTextLayer(project: ProjectState): TextLayer {
     opacity: 1,
     visible: true,
     locked: false,
+    zIndex: 1,
   };
 }
 
@@ -240,6 +243,7 @@ function createImageLayer(project: ProjectState, src: string): ImageLayer {
     opacity: 1,
     visible: true,
     locked: false,
+    zIndex: 1,
   };
 }
 
