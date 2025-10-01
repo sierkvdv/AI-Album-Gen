@@ -1015,10 +1015,7 @@ export default function EditorPage({ params }: { params: { generationId: string 
                 top: `${(layer.y / project.baseHeight) * 100}%`,
                 transform: `translate(-50%, -50%) rotate(${layer.rotation}deg) scale(${layer.scale})`,
                 opacity: layer.opacity,
-                ...(layer.mask && { 
-                  WebkitMask: `url(${layer.mask}) no-repeat center/cover`,
-                  mask: `url(${layer.mask}) no-repeat center/cover`
-                })
+                // Mask wordt nu direct op de tekst div toegepast
               } as any;
               if (layer.type === 'text') {
                 const tl = layer as TextLayer;
@@ -1046,6 +1043,7 @@ export default function EditorPage({ params }: { params: { generationId: string 
                     }}
                     className={`absolute whitespace-pre select-none ${isSelected ? 'ring-2 ring-blue-500' : ''}`}
                     style={{
+                      // bestaande stijl:
                       ...style,
                       fontFamily: tl.fontFamily,
                       fontSize: `${tl.fontSize}px`,
@@ -1056,6 +1054,16 @@ export default function EditorPage({ params }: { params: { generationId: string 
                       textAlign: 'center',
                       letterSpacing: `${tl.letterSpacing}px`,
                       lineHeight: tl.lineHeight,
+                      // nieuwe eigenschappen:
+                      textShadow: tl.shadow
+                        ? `${tl.shadow.offsetX}px ${tl.shadow.offsetY}px ${tl.shadow.blur}px ${tl.shadow.color}`
+                        : undefined,
+                      WebkitTextStrokeWidth: tl.outline ? `${tl.outline.width}px` : undefined,
+                      WebkitTextStrokeColor: tl.outline ? tl.outline.color : undefined,
+                      backdropFilter: tl.blurBehind ? 'blur(4px)' : undefined,
+                      WebkitBackdropFilter: tl.blurBehind ? 'blur(4px)' : undefined,
+                      mask: layer.mask ? `url(${layer.mask})` : undefined,
+                      WebkitMask: layer.mask ? `url(${layer.mask})` : undefined,
                     }}
                   >
                     {tl.text}
