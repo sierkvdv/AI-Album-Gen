@@ -3,6 +3,7 @@
 // including text and image layers, masking, advanced typography controls,
 // font uploads and comprehensive layer management.  All work is performed
 // client‑side – nothing here requires server changes.  See README for
+// Force rebuild to fix chunk loading error
 // details.
 
 "use client";
