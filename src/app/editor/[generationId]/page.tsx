@@ -1426,7 +1426,7 @@ export default function EditorPage({ params }: { params: { generationId: string 
                         padding: `${tl.blurBehind.spread}px`,
                         margin: `-${tl.blurBehind.spread}px`,
                       }),
-                      // CSS mask for text masking - try multiple approaches
+                      // CSS mask for text masking - try simpler approach
                       ...(tl.mask && (() => {
                         console.log('Applying mask to text layer:', {
                           layerId: tl.id,
@@ -1435,17 +1435,9 @@ export default function EditorPage({ params }: { params: { generationId: string 
                           hasMask: !!tl.mask
                         });
                         return {
-                          // Try multiple mask syntaxes
-                          mask: `url(${tl.mask})`,
-                          WebkitMask: `url(${tl.mask})`,
-                          maskImage: `url(${tl.mask})`,
-                          WebkitMaskImage: `url(${tl.mask})`,
-                          maskSize: '100% 100%',
-                          WebkitMaskSize: '100% 100%',
-                          maskRepeat: 'no-repeat',
-                          WebkitMaskRepeat: 'no-repeat',
-                          maskPosition: 'center',
-                          WebkitMaskPosition: 'center',
+                          // Try simple mask syntax
+                          WebkitMask: `url(${tl.mask}) no-repeat center/100% 100%`,
+                          mask: `url(${tl.mask}) no-repeat center/100% 100%`,
                           // Add fallback for testing
                           backgroundColor: 'rgba(255,0,0,0.3)', // Red tint to see if mask is applied
                         };
@@ -1567,6 +1559,38 @@ export default function EditorPage({ params }: { params: { generationId: string 
               }
             }} className="px-3 py-1 bg-red-600 text-white rounded">
               Debug Mask
+            </button>
+            <button onClick={() => {
+              if (selectedLayerId && project) {
+                const layer = project.layers.find(l => l.id === selectedLayerId);
+                if (layer?.mask) {
+                  // Create a visual overlay to show the mask
+                  const overlay = document.createElement('div');
+                  overlay.style.position = 'fixed';
+                  overlay.style.top = '50%';
+                  overlay.style.left = '50%';
+                  overlay.style.transform = 'translate(-50%, -50%)';
+                  overlay.style.width = '400px';
+                  overlay.style.height = '400px';
+                  overlay.style.backgroundImage = `url(${layer.mask})`;
+                  overlay.style.backgroundSize = 'contain';
+                  overlay.style.backgroundRepeat = 'no-repeat';
+                  overlay.style.backgroundPosition = 'center';
+                  overlay.style.border = '2px solid red';
+                  overlay.style.zIndex = '9999';
+                  overlay.style.backgroundColor = 'white';
+                  document.body.appendChild(overlay);
+                  
+                  // Remove after 5 seconds
+                  setTimeout(() => {
+                    document.body.removeChild(overlay);
+                  }, 5000);
+                  
+                  console.log('Mask overlay created');
+                }
+              }
+            }} className="px-3 py-1 bg-purple-600 text-white rounded">
+              Show Mask
             </button>
             <button onClick={handleSave} className="px-3 py-1 bg-green-600 text-white rounded">
               Save
