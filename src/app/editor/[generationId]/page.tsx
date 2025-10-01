@@ -349,19 +349,23 @@ export default function EditorPage({ params }: { params: { generationId: string 
   // conversion of legacy layers and filter defaults.
   useEffect(() => {
     let cancelled = false;
+
     async function load() {
       try {
+        // 1. Haal de gegenereerde afbeelding op
         const genRes = await fetch(`/api/generation/${generationId}`);
         if (!genRes.ok) throw new Error('Failed to load generation');
         const generation = await genRes.json();
+
+        // 2. Haal het bestaande project op, of creëer een nieuw project
         let proj: ProjectState | null = null;
         const projRes = await fetch(`/api/projects/${generationId}`);
         if (projRes.ok) {
           const json = await projRes.json();
           proj = json.project;
         }
-        // Create a new project if none exists
         if (!proj) {
+          // Geen project gevonden: maak een nieuw project
           const img = new Image();
           img.crossOrigin = 'anonymous';
           img.src = generation.imageUrl;
@@ -371,42 +375,29 @@ export default function EditorPage({ params }: { params: { generationId: string 
             baseAssetUrl: generation.imageUrl,
             baseWidth: img.naturalWidth,
             baseHeight: img.naturalHeight,
-            crop: {
-              aspect: '1:1',
-              x: 0,
-              y: 0,
-              scale: 1,
-            },
-            filters: {
-              brightness: 100,
-              contrast: 100,
-              saturation: 100,
-              hue: 0,
-              vignette: 0,
-              grain: 0,
-              blur: 0,
-            },
+            crop: { aspect: '1:1', x: 0, y: 0, scale: 1 },
+            filters: { brightness: 100, contrast: 100, saturation: 100, hue: 0, vignette: 0, grain: 0, blur: 0 },
             layers: [],
           };
-          // Create project server side
           const newProjRes = await fetch('/api/projects/new', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ generationId, project: proj }),
           });
           if (!newProjRes.ok) throw new Error('Failed to create project');
-          const newProjJson = await newProjRes.json();
-          proj = newProjJson.project;
+          const { project: savedProject } = await newProjRes.json();
+          proj = savedProject;
         }
 
-        // Load base image
-        const img2 = new Image();
-        img2.crossOrigin = 'anonymous';
-        img2.src = proj.baseAssetUrl;
-        await img2.decode();
+        // 3. Op dit punt is proj gegarandeerd niet null -> veilig gebruiken
+        const baseImg = new Image();
+        baseImg.crossOrigin = 'anonymous';
+        baseImg.src = proj.baseAssetUrl;
+        await baseImg.decode();
+
         if (!cancelled) {
           setProject(proj);
-          setImage(img2);
+          setImage(baseImg);
         }
       } catch (err) {
         console.error(err);
@@ -418,6 +409,7 @@ export default function EditorPage({ params }: { params: { generationId: string 
         if (!cancelled) setLoading(false);
       }
     }
+
     load();
     return () => {
       cancelled = true;
