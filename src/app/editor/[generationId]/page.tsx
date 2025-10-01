@@ -690,14 +690,9 @@ export default function EditorPage({ params }: { params: { generationId: string 
       const canvas = maskCanvasRef.current;
       if (!canvas || !project) return;
       
-      // Set canvas dimensions to match container for proper positioning
-      const containerRect = containerRef.current?.getBoundingClientRect();
-      if (!containerRect) return;
-      
-      canvas.width = containerRect.width;
-      canvas.height = containerRect.height;
-      canvas.style.width = '100%';
-      canvas.style.height = '100%';
+      // Set canvas dimensions for layer-relative positioning
+      canvas.width = 200;
+      canvas.height = 200;
       
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
@@ -710,8 +705,17 @@ export default function EditorPage({ params }: { params: { generationId: string 
         const img = new Image();
         img.src = layer.mask;
         img.onload = () => {
-          // Draw existing mask scaled to canvas size
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          // Draw existing mask at layer position on canvas
+          const maskSize = 200;
+          const sourceX = layer.x - maskSize/2;
+          const sourceY = layer.y - maskSize/2;
+          const sourceSize = maskSize;
+          
+          // Extract the mask area around the layer position
+          ctx.drawImage(img, 
+            sourceX, sourceY, sourceSize, sourceSize,
+            0, 0, canvas.width, canvas.height
+          );
           maskCtxRef.current = ctx;
         };
       } else {
@@ -743,9 +747,17 @@ export default function EditorPage({ params }: { params: { generationId: string 
     // Only draw on pointer down or when dragging
     if (e.type === 'pointermove' && e.buttons === 0) return;
     
-    // Use direct canvas coordinates since canvas now matches container
-    const x = e.clientX - containerRect.left;
-    const y = e.clientY - containerRect.top;
+    // Get layer position for relative coordinates
+    const layer = project.layers.find(l => l.id === maskEditingLayerId);
+    if (!layer) return;
+    
+    // Calculate layer position in container coordinates
+    const layerX = (layer.x / project.baseWidth) * containerRect.width;
+    const layerY = (layer.y / project.baseHeight) * containerRect.height;
+    
+    // Convert to canvas coordinates (canvas is 200x200, centered on layer)
+    const x = (e.clientX - containerRect.left - layerX + 100) * (200 / 200);
+    const y = (e.clientY - containerRect.top - layerY + 100) * (200 / 200);
     
     // Draw black or white on the mask canvas
     ctx.fillStyle = maskMode === 'erase' ? 'black' : 'white';
@@ -762,8 +774,19 @@ export default function EditorPage({ params }: { params: { generationId: string 
     scaledCanvas.height = project.baseHeight;
     const scaledCtx = scaledCanvas.getContext('2d');
     if (scaledCtx) {
-      // Draw the mask canvas scaled to project dimensions
-      scaledCtx.drawImage(canvas, 0, 0, project.baseWidth, project.baseHeight);
+      // Calculate where to draw the mask on the scaled canvas
+      const layerX = layer.x;
+      const layerY = layer.y;
+      const maskSize = 200; // Canvas size
+      
+      // Draw the mask canvas at the layer position
+      scaledCtx.drawImage(canvas, 
+        layerX - maskSize/2, 
+        layerY - maskSize/2, 
+        maskSize, 
+        maskSize
+      );
+      
       const dataUrl = scaledCanvas.toDataURL('image/png');
       console.log('Mask updated:', {
         layerId: maskEditingLayerId,
@@ -785,13 +808,22 @@ export default function EditorPage({ params }: { params: { generationId: string 
     
     // Update mask in real-time after reset - scale to project dimensions
     if (project) {
-      const scaledCanvas = document.createElement('canvas');
-      scaledCanvas.width = project.baseWidth;
-      scaledCanvas.height = project.baseHeight;
-      const scaledCtx = scaledCanvas.getContext('2d');
-      if (scaledCtx) {
-        scaledCtx.drawImage(canvas, 0, 0, project.baseWidth, project.baseHeight);
-        updateLayer(maskEditingLayerId, { mask: scaledCanvas.toDataURL('image/png') });
+      const layer = project.layers.find(l => l.id === maskEditingLayerId);
+      if (layer) {
+        const scaledCanvas = document.createElement('canvas');
+        scaledCanvas.width = project.baseWidth;
+        scaledCanvas.height = project.baseHeight;
+        const scaledCtx = scaledCanvas.getContext('2d');
+        if (scaledCtx) {
+          const maskSize = 200;
+          scaledCtx.drawImage(canvas, 
+            layer.x - maskSize/2, 
+            layer.y - maskSize/2, 
+            maskSize, 
+            maskSize
+          );
+          updateLayer(maskEditingLayerId, { mask: scaledCanvas.toDataURL('image/png') });
+        }
       }
     }
   }
@@ -812,13 +844,22 @@ export default function EditorPage({ params }: { params: { generationId: string 
     
     // Update mask in real-time after inversion - scale to project dimensions
     if (project) {
-      const scaledCanvas = document.createElement('canvas');
-      scaledCanvas.width = project.baseWidth;
-      scaledCanvas.height = project.baseHeight;
-      const scaledCtx = scaledCanvas.getContext('2d');
-      if (scaledCtx) {
-        scaledCtx.drawImage(canvas, 0, 0, project.baseWidth, project.baseHeight);
-        updateLayer(maskEditingLayerId, { mask: scaledCanvas.toDataURL('image/png') });
+      const layer = project.layers.find(l => l.id === maskEditingLayerId);
+      if (layer) {
+        const scaledCanvas = document.createElement('canvas');
+        scaledCanvas.width = project.baseWidth;
+        scaledCanvas.height = project.baseHeight;
+        const scaledCtx = scaledCanvas.getContext('2d');
+        if (scaledCtx) {
+          const maskSize = 200;
+          scaledCtx.drawImage(canvas, 
+            layer.x - maskSize/2, 
+            layer.y - maskSize/2, 
+            maskSize, 
+            maskSize
+          );
+          updateLayer(maskEditingLayerId, { mask: scaledCanvas.toDataURL('image/png') });
+        }
       }
     }
   }
@@ -1389,37 +1430,47 @@ export default function EditorPage({ params }: { params: { generationId: string 
               }
             })}
             {/* Mask editing overlay */}
-            {maskEditingLayerId && (
-              <div className="absolute inset-0 z-10">
-                {/* Show current mask as overlay */}
-                <div 
-                  className="absolute inset-0 bg-red-500 bg-opacity-20"
-                  style={{
-                    background: 'linear-gradient(45deg, rgba(255,0,0,0.1) 25%, transparent 25%), linear-gradient(-45deg, rgba(255,0,0,0.1) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, rgba(255,0,0,0.1) 75%), linear-gradient(-45deg, transparent 75%, rgba(255,0,0,0.1) 75%)',
-                    backgroundSize: '20px 20px',
-                    backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px'
-                  }}
-                />
-                {/* Drawing canvas */}
-                <canvas
-                  ref={maskCanvasRef}
-                  className="absolute inset-0 touch-none cursor-crosshair"
-                  style={{ 
-                    background: 'transparent',
-                    pointerEvents: 'auto'
-                  }}
-                  onPointerDown={handleMaskDraw}
-                  onPointerMove={handleMaskDraw}
-                />
-                {/* Instructions */}
-                <div className="absolute top-4 left-4 bg-black bg-opacity-75 text-white p-2 rounded text-sm">
-                  <div>Mask Mode: {maskMode === 'erase' ? 'Verbergen (zwart)' : 'Tonen (wit)'}</div>
-                  <div>Brush Size: {maskBrushSize}px</div>
-                  <div>Layer: {project.layers.find(l => l.id === maskEditingLayerId)?.name}</div>
-                  <div>Zwart = verborgen, Wit = zichtbaar</div>
+            {maskEditingLayerId && (() => {
+              const layer = project.layers.find(l => l.id === maskEditingLayerId);
+              if (!layer) return null;
+              
+              return (
+                <div className="absolute inset-0 z-10">
+                  {/* Show current mask as overlay */}
+                  <div 
+                    className="absolute inset-0 bg-red-500 bg-opacity-20"
+                    style={{
+                      background: 'linear-gradient(45deg, rgba(255,0,0,0.1) 25%, transparent 25%), linear-gradient(-45deg, rgba(255,0,0,0.1) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, rgba(255,0,0,0.1) 75%), linear-gradient(-45deg, transparent 75%, rgba(255,0,0,0.1) 75%)',
+                      backgroundSize: '20px 20px',
+                      backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px'
+                    }}
+                  />
+                  {/* Drawing canvas positioned relative to the layer */}
+                  <canvas
+                    ref={maskCanvasRef}
+                    className="absolute touch-none cursor-crosshair"
+                    style={{ 
+                      background: 'transparent',
+                      pointerEvents: 'auto',
+                      left: `${(layer.x / project.baseWidth) * 100}%`,
+                      top: `${(layer.y / project.baseHeight) * 100}%`,
+                      transform: `translate(-50%, -50%)`,
+                      width: '200px',
+                      height: '200px'
+                    }}
+                    onPointerDown={handleMaskDraw}
+                    onPointerMove={handleMaskDraw}
+                  />
+                  {/* Instructions */}
+                  <div className="absolute top-4 left-4 bg-black bg-opacity-75 text-white p-2 rounded text-sm">
+                    <div>Mask Mode: {maskMode === 'erase' ? 'Verbergen (zwart)' : 'Tonen (wit)'}</div>
+                    <div>Brush Size: {maskBrushSize}px</div>
+                    <div>Layer: {layer.name}</div>
+                    <div>Zwart = verborgen, Wit = zichtbaar</div>
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
           </div>
           {/* Action buttons */}
           <div className="mt-4 flex space-x-2">
