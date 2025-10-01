@@ -973,6 +973,24 @@ export default function EditorPage({ params }: { params: { generationId: string 
               dragInfo.current = null;
             }}
           >
+            {/* SVG definitions for masks */}
+            <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: -1 }}>
+              <defs>
+                {project.layers.map((layer) => {
+                  if (!layer.mask) return null;
+                  return (
+                    <mask key={`mask-${layer.id}`} id={`mask-${layer.id}`}>
+                      <image
+                        href={layer.mask}
+                        width="100%"
+                        height="100%"
+                        preserveAspectRatio="none"
+                      />
+                    </mask>
+                  );
+                })}
+              </defs>
+            </svg>
             {/* Base image with filters */}
             <img
               src={project.baseAssetUrl}
@@ -990,10 +1008,8 @@ export default function EditorPage({ params }: { params: { generationId: string 
                 transform: `translate(-50%, -50%) rotate(${layer.rotation}deg) scale(${layer.scale})`,
                 opacity: layer.opacity,
                 ...(layer.mask && { 
-                  WebkitMask: `url(${layer.mask}) no-repeat center/cover`,
-                  mask: `url(${layer.mask}) no-repeat center/cover`,
-                  WebkitMaskComposite: 'source-in',
-                  maskComposite: 'intersect'
+                  clipPath: `url(#mask-${layer.id})`,
+                  WebkitClipPath: `url(#mask-${layer.id})`
                 })
               } as any;
               if (layer.type === 'text') {
