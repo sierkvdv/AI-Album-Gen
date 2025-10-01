@@ -486,18 +486,11 @@ export default function EditorPage({ params }: { params: { generationId: string 
 
   // Helper to update a layer
   function updateLayer(id: string, update: Partial<Layer>) {
-    console.log('updateLayer called:', { id, update });
     setProject((prev) => {
       if (!prev) return prev;
       const newLayers = prev.layers.map((layer) =>
         layer.id === id ? { ...layer, ...update } as Layer : layer,
       );
-      console.log('updateLayer result:', { 
-        layerId: id, 
-        hasMask: update.mask ? true : false,
-        maskLength: update.mask?.length || 0,
-        newLayersCount: newLayers.length
-      });
       return { ...prev, layers: newLayers };
     });
   }
@@ -745,57 +738,6 @@ export default function EditorPage({ params }: { params: { generationId: string 
   }
 
   // Test function to create a simple mask
-  function createTestMask() {
-    if (!selectedLayerId || !project) return;
-    
-    // Create a simple test mask with 3 dots
-    const canvas = document.createElement('canvas');
-    canvas.width = project.baseWidth;
-    canvas.height = project.baseHeight;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    
-    // Fill with white (fully visible)
-    ctx.fillStyle = 'white';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    // Draw 3 black dots (hidden areas)
-    ctx.fillStyle = 'black';
-    const centerX = project.baseWidth / 2;
-    const centerY = project.baseHeight / 2;
-    
-    // 3 dots in a line
-    ctx.beginPath();
-    ctx.arc(centerX - 50, centerY, 20, 0, Math.PI * 2);
-    ctx.fill();
-    
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, 20, 0, Math.PI * 2);
-    ctx.fill();
-    
-    ctx.beginPath();
-    ctx.arc(centerX + 50, centerY, 20, 0, Math.PI * 2);
-    ctx.fill();
-    
-    const dataUrl = canvas.toDataURL('image/png');
-    console.log('Test mask created, calling updateLayer:', {
-      selectedLayerId,
-      dataUrlLength: dataUrl.length,
-      dataUrlPreview: dataUrl.substring(0, 100) + '...'
-    });
-    updateLayer(selectedLayerId, { mask: dataUrl });
-    console.log('Test mask created:', dataUrl.substring(0, 100) + '...');
-    
-    // Test if the mask data URL is valid
-    const img = new Image();
-    img.onload = () => {
-      console.log('Mask image loaded successfully, dimensions:', img.width, 'x', img.height);
-    };
-    img.onerror = () => {
-      console.error('Failed to load mask image');
-    };
-    img.src = dataUrl;
-  }
 
   // Alternative mask approach using canvas-based rendering
   function createMaskedTextElement(textLayer: TextLayer, project: ProjectState) {
@@ -1438,23 +1380,11 @@ export default function EditorPage({ params }: { params: { generationId: string 
                         padding: `${tl.blurBehind.spread}px`,
                         margin: `-${tl.blurBehind.spread}px`,
                       }),
-                      // CSS mask for text masking - try different approach
-                      ...(tl.mask && (() => {
-                        console.log('Applying mask to text layer:', {
-                          layerId: tl.id,
-                          maskLength: tl.mask.length,
-                          maskPreview: tl.mask.substring(0, 50) + '...',
-                          hasMask: !!tl.mask,
-                          textContent: tl.text
-                        });
-                        return {
-                          // Apply mask with proper syntax
-                          WebkitMask: `url(${tl.mask}) no-repeat center/100% 100%`,
-                          mask: `url(${tl.mask}) no-repeat center/100% 100%`,
-                          // Add fallback for testing
-                          backgroundColor: 'rgba(255,0,0,0.3)', // Red tint to see if mask is applied
-                        };
-                      })()),
+                      // Apply mask to text layer
+                      ...(tl.mask && {
+                        WebkitMask: `url(${tl.mask}) no-repeat center/100% 100%`,
+                        mask: `url(${tl.mask}) no-repeat center/100% 100%`,
+                      }),
                     }}
                   >
                     {tl.text}
@@ -1545,117 +1475,6 @@ export default function EditorPage({ params }: { params: { generationId: string 
             </button>
             <button onClick={handleAddImage} className="px-3 py-1 bg-blue-600 text-white rounded">
               Add Image
-            </button>
-            <button onClick={createTestMask} className="px-3 py-1 bg-yellow-600 text-white rounded">
-              Test Mask
-            </button>
-            <button onClick={() => {
-              if (selectedLayerId) {
-                const layer = project?.layers.find(l => l.id === selectedLayerId);
-                if (layer?.mask) {
-                  console.log('Current mask for layer:', layer.id);
-                  console.log('Mask data URL:', layer.mask);
-                  // Test if mask is valid
-                  const img = new Image();
-                  img.onload = () => console.log('Mask image valid, size:', img.width, 'x', img.height);
-                  img.onerror = () => console.error('Mask image invalid');
-                  img.src = layer.mask;
-                } else {
-                  console.log('No mask found for layer:', selectedLayerId);
-                }
-              }
-            }} className="px-3 py-1 bg-red-600 text-white rounded">
-              Debug Mask
-            </button>
-            <button onClick={() => {
-              if (project) {
-                console.log('All layers and their masks:');
-                project.layers.forEach((layer, index) => {
-                  console.log(`Layer ${index + 1}:`, {
-                    id: layer.id,
-                    name: layer.name,
-                    type: layer.type,
-                    hasMask: !!layer.mask,
-                    maskLength: layer.mask?.length || 0
-                  });
-                });
-              }
-            }} className="px-3 py-1 bg-orange-600 text-white rounded">
-              List Masks
-            </button>
-            <button onClick={() => {
-              if (selectedLayerId && project) {
-                const layer = project.layers.find(l => l.id === selectedLayerId);
-                if (layer?.mask) {
-                  // Create a visual overlay to show the mask
-                  const overlay = document.createElement('div');
-                  overlay.style.position = 'fixed';
-                  overlay.style.top = '50%';
-                  overlay.style.left = '50%';
-                  overlay.style.transform = 'translate(-50%, -50%)';
-                  overlay.style.width = '400px';
-                  overlay.style.height = '400px';
-                  overlay.style.backgroundImage = `url(${layer.mask})`;
-                  overlay.style.backgroundSize = 'contain';
-                  overlay.style.backgroundRepeat = 'no-repeat';
-                  overlay.style.backgroundPosition = 'center';
-                  overlay.style.border = '2px solid red';
-                  overlay.style.zIndex = '9999';
-                  overlay.style.backgroundColor = 'white';
-                  document.body.appendChild(overlay);
-                  
-                  // Remove after 5 seconds
-                  setTimeout(() => {
-                    document.body.removeChild(overlay);
-                  }, 5000);
-                  
-                  console.log('Mask overlay created');
-                }
-              }
-            }} className="px-3 py-1 bg-purple-600 text-white rounded">
-              Show Mask
-            </button>
-            
-            <button onClick={() => {
-              if (!project || !selectedLayerId) return;
-              const layer = project.layers.find(l => l.id === selectedLayerId);
-              if (!layer || !layer.mask) return;
-              
-              // Test if mask image loads
-              const img = new Image();
-              img.onload = () => {
-                console.log('Mask image loaded successfully:', {
-                  width: img.width,
-                  height: img.height,
-                  src: img.src.substring(0, 100) + '...'
-                });
-                
-                // Test CSS mask syntax
-                const testDiv = document.createElement('div');
-                testDiv.style.position = 'fixed';
-                testDiv.style.top = '50%';
-                testDiv.style.left = '50%';
-                testDiv.style.transform = 'translate(-50%, -50%)';
-                testDiv.style.width = '200px';
-                testDiv.style.height = '200px';
-                testDiv.style.backgroundColor = 'red';
-                (testDiv.style as any).WebkitMask = `url(${layer.mask}) no-repeat center/100% 100%`;
-                testDiv.style.mask = `url(${layer.mask}) no-repeat center/100% 100%`;
-                testDiv.style.border = '2px solid blue';
-                testDiv.style.zIndex = '9999';
-                document.body.appendChild(testDiv);
-                
-                setTimeout(() => {
-                  document.body.removeChild(testDiv);
-                  console.log('CSS mask test completed - check if red div was masked');
-                }, 3000);
-              };
-              img.onerror = () => {
-                console.error('Failed to load mask image');
-              };
-              img.src = layer.mask;
-            }} className="px-3 py-1 bg-yellow-600 text-white rounded">
-              Test CSS Mask
             </button>
             <button onClick={handleSave} className="px-3 py-1 bg-green-600 text-white rounded">
               Save
