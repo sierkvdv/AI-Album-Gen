@@ -384,9 +384,21 @@ export default function EditorPage({ params }: { params: { generationId: string 
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ generationId, project: proj }),
           });
-          if (!newProjRes.ok) throw new Error('Failed to create project');
-          const { project: savedProject } = await newProjRes.json();
-          proj = savedProject;
+          
+          if (!newProjRes.ok) {
+            const errorData = await newProjRes.json();
+            console.error('Project creation failed:', errorData);
+            throw new Error(`Failed to create project: ${errorData.error || 'Unknown error'}`);
+          }
+          
+          const responseData = await newProjRes.json();
+          console.log('Project creation response:', responseData);
+          
+          if (!responseData.success) {
+            throw new Error('Project creation returned success: false');
+          }
+          
+          proj = responseData.project;
         }
 
         // 3. Vanaf hier weet je zeker dat proj niet null is
@@ -406,9 +418,10 @@ export default function EditorPage({ params }: { params: { generationId: string 
           setImage(baseImg);
         }
       } catch (err) {
-        console.error(err);
+        console.error('Editor loading error:', err);
         if (!cancelled) {
-          alert('Failed to load project');
+          const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+          alert(`Failed to load project: ${errorMessage}`);
           router.push('/dashboard');
         }
       } finally {
