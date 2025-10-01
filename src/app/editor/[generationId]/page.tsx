@@ -427,7 +427,7 @@ export default function EditorPage({ params }: { params: { generationId: string 
     setProject((prev) => {
       if (!prev) return prev;
       const newLayers = prev.layers.map((layer) =>
-        layer.id === id ? { ...layer, ...update } : layer,
+        layer.id === id ? { ...layer, ...update } as Layer : layer,
       );
       return { ...prev, layers: newLayers };
     });
