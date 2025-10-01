@@ -986,6 +986,10 @@ export default function EditorPage({ params }: { params: { generationId: string 
                 top: `${(layer.y / project.baseHeight) * 100}%`,
                 transform: `translate(-50%, -50%) rotate(${layer.rotation}deg) scale(${layer.scale})`,
                 opacity: layer.opacity,
+                ...(layer.mask && { 
+                  WebkitMask: `url(${layer.mask}) no-repeat center/contain`,
+                  mask: `url(${layer.mask}) no-repeat center/contain`
+                })
               } as any;
               if (layer.type === 'text') {
                 const tl = layer as TextLayer;
@@ -1065,7 +1069,7 @@ export default function EditorPage({ params }: { params: { generationId: string 
                 ref={maskCanvasRef}
                 className="absolute inset-0 z-10 touch-none cursor-crosshair"
                 style={{ 
-                  background: 'rgba(0,0,0,0.3)',
+                  background: 'rgba(255,0,0,0.2)',
                   mixBlendMode: 'multiply'
                 }}
                 onPointerDown={handleMaskDraw}
