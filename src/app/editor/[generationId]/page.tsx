@@ -479,6 +479,7 @@ export default function EditorPage({ params }: { params: { generationId: string 
   async function handleExport() {
     if (!project || !image) return;
     const currentProject = project; // Capture project to avoid null issues in nested function
+    const currentImage = image; // Capture image to avoid null issues in nested function
     const { default: JSZip } = await import('jszip');
     const zip = new JSZip();
     async function renderToBlob(size: number, mime: 'image/png' | 'image/jpeg', quality?: number) {
@@ -487,7 +488,7 @@ export default function EditorPage({ params }: { params: { generationId: string 
       canvas.height = size;
       const ctx = canvas.getContext('2d')!;
       ctx.filter = computeCssFilters(currentProject.filters);
-      ctx.drawImage(image, 0, 0, size, size);
+      ctx.drawImage(currentImage, 0, 0, size, size);
       ctx.filter = 'none';
       for (const layer of currentProject.layers) {
         if (!layer.visible) continue;
@@ -528,7 +529,7 @@ export default function EditorPage({ params }: { params: { generationId: string 
         } else {
           const textLayer = layer as TextLayer;
           // Determine fill colour with auto contrast
-          const fillColor = textLayer.autoContrast ? pickAutoContrastColor(image, textLayer, currentProject) : textLayer.color;
+          const fillColor = textLayer.autoContrast ? pickAutoContrastColor(currentImage, textLayer, currentProject) : textLayer.color;
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
           ctx.font = `${textLayer.italic ? 'italic ' : ''}${textLayer.fontWeight} ${textLayer.fontSize}px ${textLayer.fontFamily}`;
