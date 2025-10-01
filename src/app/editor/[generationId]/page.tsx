@@ -691,8 +691,8 @@ export default function EditorPage({ params }: { params: { generationId: string 
       if (!canvas || !project) return;
       
       // Set canvas dimensions to match container
-      const containerRect = containerRef.current?.getBoundingClientRect();
-      if (!containerRect) return;
+    const containerRect = containerRef.current?.getBoundingClientRect();
+    if (!containerRect) return;
       
       canvas.width = containerRect.width;
       canvas.height = containerRect.height;
@@ -731,6 +731,44 @@ export default function EditorPage({ params }: { params: { generationId: string 
     updateLayer(maskEditingLayerId, { mask: dataUrl });
     setMaskEditingLayerId(null);
   }
+
+  // Test function to create a simple mask
+  function createTestMask() {
+    if (!selectedLayerId || !project) return;
+    
+    // Create a simple test mask with 3 dots
+    const canvas = document.createElement('canvas');
+    canvas.width = project.baseWidth;
+    canvas.height = project.baseHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    // Fill with white (fully visible)
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw 3 black dots (hidden areas)
+    ctx.fillStyle = 'black';
+    const centerX = project.baseWidth / 2;
+    const centerY = project.baseHeight / 2;
+    
+    // 3 dots in a line
+    ctx.beginPath();
+    ctx.arc(centerX - 50, centerY, 20, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, 20, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.beginPath();
+    ctx.arc(centerX + 50, centerY, 20, 0, Math.PI * 2);
+    ctx.fill();
+    
+    const dataUrl = canvas.toDataURL('image/png');
+    updateLayer(selectedLayerId, { mask: dataUrl });
+    console.log('Test mask created:', dataUrl.substring(0, 100) + '...');
+  }
   function handleMaskDraw(e: React.PointerEvent) {
     if (!maskEditingLayerId) return;
     const canvas = maskCanvasRef.current;
@@ -768,7 +806,8 @@ export default function EditorPage({ params }: { params: { generationId: string 
         mode: maskMode,
         position: { x, y },
         brushSize: maskBrushSize,
-        dataUrlLength: dataUrl.length
+        dataUrlLength: dataUrl.length,
+        dataUrlPreview: dataUrl.substring(0, 100) + '...'
       });
       updateLayer(maskEditingLayerId, { mask: dataUrl });
     }
@@ -1247,12 +1286,12 @@ export default function EditorPage({ params }: { params: { generationId: string 
           >
             {/* Base image with filters - only show if no image layers exist */}
             {!project.layers.some(l => l.type === 'image') && (
-              <img
-                src={project.baseAssetUrl}
-                alt="Base"
-                className="absolute inset-0 w-full h-full object-cover"
-                style={{ filter: computeCssFilters(project.filters) }}
-              />
+            <img
+              src={project.baseAssetUrl}
+              alt="Base"
+              className="absolute inset-0 w-full h-full object-cover"
+              style={{ filter: computeCssFilters(project.filters) }}
+            />
             )}
             {/* Image & text layers */}
             {project.layers.map((layer) => {
@@ -1326,7 +1365,8 @@ export default function EditorPage({ params }: { params: { generationId: string 
                         console.log('Applying mask to text layer:', {
                           layerId: tl.id,
                           maskLength: tl.mask.length,
-                          maskPreview: tl.mask.substring(0, 50) + '...'
+                          maskPreview: tl.mask.substring(0, 50) + '...',
+                          hasMask: !!tl.mask
                         });
                         return {
                           maskImage: `url(${tl.mask})`,
@@ -1337,6 +1377,8 @@ export default function EditorPage({ params }: { params: { generationId: string 
                           WebkitMaskRepeat: 'no-repeat',
                           maskPosition: '50% 50%',
                           WebkitMaskPosition: '50% 50%',
+                          // Add fallback for testing
+                          backgroundColor: 'rgba(255,0,0,0.3)', // Red tint to see if mask is applied
                         };
                       })()),
                     }}
@@ -1435,6 +1477,9 @@ export default function EditorPage({ params }: { params: { generationId: string 
             </button>
             <button onClick={handleAddImage} className="px-3 py-1 bg-blue-600 text-white rounded">
               Add Image
+            </button>
+            <button onClick={createTestMask} className="px-3 py-1 bg-yellow-600 text-white rounded">
+              Test Mask
             </button>
             <button onClick={handleSave} className="px-3 py-1 bg-green-600 text-white rounded">
               Save
