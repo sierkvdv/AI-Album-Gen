@@ -1448,15 +1448,9 @@ export default function EditorPage({ params }: { params: { generationId: string 
                           textContent: tl.text
                         });
                         return {
-                          // Try different mask syntax
-                          WebkitMaskImage: `url(${tl.mask})`,
-                          maskImage: `url(${tl.mask})`,
-                          WebkitMaskSize: '100% 100%',
-                          maskSize: '100% 100%',
-                          WebkitMaskRepeat: 'no-repeat',
-                          maskRepeat: 'no-repeat',
-                          WebkitMaskPosition: 'center',
-                          maskPosition: 'center',
+                          // Apply mask with proper syntax
+                          WebkitMask: `url(${tl.mask}) no-repeat center/100% 100%`,
+                          mask: `url(${tl.mask}) no-repeat center/100% 100%`,
                           // Add fallback for testing
                           backgroundColor: 'rgba(255,0,0,0.3)', // Red tint to see if mask is applied
                         };
@@ -1479,14 +1473,8 @@ export default function EditorPage({ params }: { params: { generationId: string 
                       filter: computeCssFilters(project.filters),
                       // Apply mask to image layer
                       ...(il.mask && {
-                        maskImage: `url(${il.mask})`,
-                        WebkitMaskImage: `url(${il.mask})`,
-                        maskSize: '100% 100%',
-                        WebkitMaskSize: '100% 100%',
-                        maskRepeat: 'no-repeat',
-                        WebkitMaskRepeat: 'no-repeat',
-                        maskPosition: '50% 50%',
-                        WebkitMaskPosition: '50% 50%',
+                        WebkitMask: `url(${il.mask}) no-repeat center/100% 100%`,
+                        mask: `url(${il.mask}) no-repeat center/100% 100%`,
                       }),
                     }}
                     onPointerDown={(e) => {
@@ -1626,6 +1614,48 @@ export default function EditorPage({ params }: { params: { generationId: string 
               }
             }} className="px-3 py-1 bg-purple-600 text-white rounded">
               Show Mask
+            </button>
+            
+            <button onClick={() => {
+              if (!project || !selectedLayerId) return;
+              const layer = project.layers.find(l => l.id === selectedLayerId);
+              if (!layer || !layer.mask) return;
+              
+              // Test if mask image loads
+              const img = new Image();
+              img.onload = () => {
+                console.log('Mask image loaded successfully:', {
+                  width: img.width,
+                  height: img.height,
+                  src: img.src.substring(0, 100) + '...'
+                });
+                
+                // Test CSS mask syntax
+                const testDiv = document.createElement('div');
+                testDiv.style.position = 'fixed';
+                testDiv.style.top = '50%';
+                testDiv.style.left = '50%';
+                testDiv.style.transform = 'translate(-50%, -50%)';
+                testDiv.style.width = '200px';
+                testDiv.style.height = '200px';
+                testDiv.style.backgroundColor = 'red';
+                testDiv.style.WebkitMask = `url(${layer.mask}) no-repeat center/100% 100%`;
+                testDiv.style.mask = `url(${layer.mask}) no-repeat center/100% 100%`;
+                testDiv.style.border = '2px solid blue';
+                testDiv.style.zIndex = '9999';
+                document.body.appendChild(testDiv);
+                
+                setTimeout(() => {
+                  document.body.removeChild(testDiv);
+                  console.log('CSS mask test completed - check if red div was masked');
+                }, 3000);
+              };
+              img.onerror = () => {
+                console.error('Failed to load mask image');
+              };
+              img.src = layer.mask;
+            }} className="px-3 py-1 bg-yellow-600 text-white rounded">
+              Test CSS Mask
             </button>
             <button onClick={handleSave} className="px-3 py-1 bg-green-600 text-white rounded">
               Save
