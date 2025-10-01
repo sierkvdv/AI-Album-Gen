@@ -84,9 +84,13 @@ export interface TextLayer extends LayerBase {
     width: number;
     color: string;
   };
-  /** When true a subtle blur is applied to the backdrop behind the text to
-   * improve legibility. */
-  blurBehind: boolean;
+  /** Blur effect behind the text to improve legibility. */
+  blurBehind?: {
+    enabled: boolean;
+    intensity: number; // 0-20px blur
+    spread: number; // 0-50px spread around text
+    fade: number; // 0-100% fade intensity
+  };
   /** When enabled the colour is automatically adjusted to maximise contrast
    * with the underlying image. */
   autoContrast: boolean;
@@ -209,7 +213,7 @@ function createDefaultTextLayer(project: ProjectState): TextLayer {
     lineHeight: 1.2,
     shadow: undefined,
     outline: undefined,
-    blurBehind: false,
+    blurBehind: undefined,
     autoContrast: false,
     x: project.baseWidth / 2,
     y: project.baseHeight / 2,
@@ -544,13 +548,13 @@ export default function EditorPage({ params }: { params: { generationId: string 
           const textLayer = layer as TextLayer;
           // Determine fill colour with auto contrast
           const fillColor = textLayer.autoContrast ? pickAutoContrastColor(currentImage, textLayer, currentProject) : textLayer.color;
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
           ctx.font = `${textLayer.italic ? 'italic ' : ''}${textLayer.fontWeight} ${textLayer.fontSize}px ${textLayer.fontFamily}`;
           // Blur behind: draw blurred backdrop before text
-          if (textLayer.blurBehind) {
+          if (textLayer.blurBehind?.enabled) {
             ctx.save();
-            ctx.filter = 'blur(4px)';
+            ctx.filter = `blur(${textLayer.blurBehind.intensity}px)`;
             ctx.fillStyle = 'rgba(0,0,0,0.3)';
             ctx.fillRect(-size, -size, size * 2, size * 2);
             ctx.restore();
@@ -642,32 +646,25 @@ export default function EditorPage({ params }: { params: { generationId: string 
       const canvas = maskCanvasRef.current;
       if (!canvas || !project) return;
       
-      // Set canvas dimensions to match the container, not the project dimensions
-      const containerRect = containerRef.current?.getBoundingClientRect();
-      if (!containerRect) return;
-      
-      canvas.width = containerRect.width;
-      canvas.height = containerRect.height;
+      // Set canvas dimensions to match project dimensions for 1:1 correspondence
+      canvas.width = project.baseWidth;
+      canvas.height = project.baseHeight;
       canvas.style.width = '100%';
       canvas.style.height = '100%';
       
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
       
-      // Set up canvas for better mask editing
+      // Start with transparent canvas
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
-      // Start with a white background (fully visible)
-      ctx.fillStyle = 'white';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
       
       const layer = project.layers.find((l) => l.id === layerId) as Layer | undefined;
       if (layer?.mask) {
         const img = new Image();
         img.src = layer.mask;
         img.onload = () => {
-          // Draw existing mask scaled to canvas size
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          // Draw existing mask at full resolution
+          ctx.drawImage(img, 0, 0);
           maskCtxRef.current = ctx;
         };
       } else {
@@ -676,20 +673,12 @@ export default function EditorPage({ params }: { params: { generationId: string 
     }, 0);
   }
   function finishMaskEditing() {
-    if (!maskEditingLayerId || !project) return;
+    if (!maskEditingLayerId) return;
     const canvas = maskCanvasRef.current;
     if (!canvas) return;
     
-    // Create a new canvas with project dimensions and scale the mask
-    const scaledCanvas = document.createElement('canvas');
-    scaledCanvas.width = project.baseWidth;
-    scaledCanvas.height = project.baseHeight;
-    const scaledCtx = scaledCanvas.getContext('2d');
-    if (!scaledCtx) return;
-    
-    // Draw the mask scaled to project dimensions
-    scaledCtx.drawImage(canvas, 0, 0, project.baseWidth, project.baseHeight);
-    const dataUrl = scaledCanvas.toDataURL('image/png');
+    // Canvas already has correct dimensions, just save the mask
+    const dataUrl = canvas.toDataURL('image/png');
     
     console.log('Saving mask for layer:', maskEditingLayerId);
     console.log('Mask data URL length:', dataUrl.length);
@@ -702,63 +691,37 @@ export default function EditorPage({ params }: { params: { generationId: string 
     const canvas = maskCanvasRef.current;
     const ctx = maskCtxRef.current;
     const containerRect = containerRef.current?.getBoundingClientRect();
-    if (!canvas || !ctx || !containerRect) return;
+    if (!canvas || !ctx || !containerRect || !project) return;
     
     // Only draw on pointer down or when dragging
     if (e.type === 'pointermove' && e.buttons === 0) return;
     
-    // Use direct canvas coordinates (no scaling needed since canvas matches container)
-    const x = e.clientX - containerRect.left;
-    const y = e.clientY - containerRect.top;
+    // Map container coordinates to canvas coordinates (1:1 correspondence)
+    const x = ((e.clientX - containerRect.left) * project.baseWidth) / containerRect.width;
+    const y = ((e.clientY - containerRect.top) * project.baseHeight) / containerRect.height;
     
-    // Correct mask logic: white = show content, black = hide content
+    // Draw black or white on the mask canvas
+    ctx.fillStyle = maskMode === 'erase' ? 'black' : 'white';
     ctx.globalCompositeOperation = 'source-over';
-    ctx.fillStyle = maskMode === 'erase' ? 'rgba(0,0,0,1)' : 'rgba(255,255,255,1)';
-    ctx.globalAlpha = 1;
     
     const radius = maskBrushSize / 2;
     ctx.beginPath();
     ctx.arc(x, y, radius, 0, Math.PI * 2);
-    ctx.closePath();
     ctx.fill();
     
-    // Update mask in real-time after each brush stroke
-    if (maskEditingLayerId && project) {
-      // Create a scaled version for the layer
-      const scaledCanvas = document.createElement('canvas');
-      scaledCanvas.width = project.baseWidth;
-      scaledCanvas.height = project.baseHeight;
-      const scaledCtx = scaledCanvas.getContext('2d');
-      if (scaledCtx) {
-        scaledCtx.drawImage(canvas, 0, 0, project.baseWidth, project.baseHeight);
-        const dataUrl = scaledCanvas.toDataURL('image/png');
-        updateLayer(maskEditingLayerId, { mask: dataUrl });
-      }
-    }
+    // Save mask in real-time
+    updateLayer(maskEditingLayerId, { mask: canvas.toDataURL('image/png') });
   }
   function resetMask() {
     const ctx = maskCtxRef.current;
     const canvas = maskCanvasRef.current;
     if (!ctx || !canvas || !maskEditingLayerId) return;
     
+    // Clear canvas (transparent = fully visible)
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Fill with white (fully visible)
-    ctx.fillStyle = 'white';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
     // Update mask in real-time after reset
-    if (project) {
-      const scaledCanvas = document.createElement('canvas');
-      scaledCanvas.width = project.baseWidth;
-      scaledCanvas.height = project.baseHeight;
-      const scaledCtx = scaledCanvas.getContext('2d');
-      if (scaledCtx) {
-        scaledCtx.drawImage(canvas, 0, 0, project.baseWidth, project.baseHeight);
-        const dataUrl = scaledCanvas.toDataURL('image/png');
-        updateLayer(maskEditingLayerId, { mask: dataUrl });
-      }
-    }
+    updateLayer(maskEditingLayerId, { mask: canvas.toDataURL('image/png') });
   }
   function invertMask() {
     const ctx = maskCtxRef.current;
@@ -776,142 +739,9 @@ export default function EditorPage({ params }: { params: { generationId: string 
     ctx.putImageData(data, 0, 0);
     
     // Update mask in real-time after inversion
-    if (project) {
-      const scaledCanvas = document.createElement('canvas');
-      scaledCanvas.width = project.baseWidth;
-      scaledCanvas.height = project.baseHeight;
-      const scaledCtx = scaledCanvas.getContext('2d');
-      if (scaledCtx) {
-        scaledCtx.drawImage(canvas, 0, 0, project.baseWidth, project.baseHeight);
-        const dataUrl = scaledCanvas.toDataURL('image/png');
-        updateLayer(maskEditingLayerId, { mask: dataUrl });
-      }
-    }
+    updateLayer(maskEditingLayerId, { mask: canvas.toDataURL('image/png') });
   }
 
-  // Helper function to create masked text element
-  function createMaskedTextElement(layer: TextLayer, maskDataUrl: string) {
-    return (
-      <div
-        key={`masked-${layer.id}`}
-        style={{
-          position: 'absolute',
-          left: `${(layer.x / project!.baseWidth) * 100}%`,
-          top: `${(layer.y / project!.baseHeight) * 100}%`,
-          transform: `translate(-50%, -50%) rotate(${layer.rotation}deg) scale(${layer.scale})`,
-          opacity: layer.opacity,
-          zIndex: layer.zIndex,
-          width: '100%',
-          height: '100%',
-          pointerEvents: 'none',
-        }}
-      >
-        <canvas
-          width={project!.baseWidth}
-          height={project!.baseHeight}
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'contain',
-          }}
-          ref={(canvas) => {
-            if (!canvas) return;
-            const ctx = canvas.getContext('2d');
-            if (!ctx) return;
-            
-            // Clear canvas
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // Draw text
-            ctx.font = `${layer.italic ? 'italic ' : ''}${layer.fontWeight} ${layer.fontSize}px ${layer.fontFamily}`;
-            ctx.fillStyle = layer.color;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            
-            // Apply mask
-            if (maskDataUrl) {
-              const maskImg = new Image();
-              maskImg.onload = () => {
-                // Create a temporary canvas for the mask
-                const maskCanvas = document.createElement('canvas');
-                maskCanvas.width = canvas.width;
-                maskCanvas.height = canvas.height;
-                const maskCtx = maskCanvas.getContext('2d');
-                if (!maskCtx) return;
-                
-                // Draw mask
-                maskCtx.drawImage(maskImg, 0, 0, canvas.width, canvas.height);
-                const maskData = maskCtx.getImageData(0, 0, canvas.width, canvas.height);
-                
-                // Draw text with mask
-                const textLines = layer.text.split('\n');
-                let yPos = canvas.height / 2 - (textLines.length - 1) * (layer.fontSize * layer.lineHeight) / 2;
-                
-                for (const line of textLines) {
-                  const text = layer.uppercase ? line.toUpperCase() : line;
-                  
-                  // Get text metrics
-                  const metrics = ctx.measureText(text);
-                  const textWidth = metrics.width;
-                  const textHeight = layer.fontSize;
-                  
-                  // Create text canvas
-                  const textCanvas = document.createElement('canvas');
-                  textCanvas.width = textWidth + 20;
-                  textCanvas.height = textHeight + 20;
-                  const textCtx = textCanvas.getContext('2d');
-                  if (!textCtx) continue;
-                  
-                  textCtx.font = ctx.font;
-                  textCtx.fillStyle = layer.color;
-                  textCtx.textAlign = 'center';
-                  textCtx.textBaseline = 'middle';
-                  textCtx.fillText(text, textCanvas.width / 2, textCanvas.height / 2);
-                  
-                  // Apply mask to text
-                  const textData = textCtx.getImageData(0, 0, textCanvas.width, textCanvas.height);
-                  const startX = Math.max(0, Math.floor(canvas.width / 2 - textWidth / 2));
-                  const startY = Math.max(0, Math.floor(yPos - textHeight / 2));
-                  
-                  for (let y = 0; y < textData.height; y++) {
-                    for (let x = 0; x < textData.width; x++) {
-                      const textIndex = (y * textData.width + x) * 4;
-                      const maskX = startX + x;
-                      const maskY = startY + y;
-                      
-                      if (maskX >= 0 && maskX < canvas.width && maskY >= 0 && maskY < canvas.height) {
-                        const maskIndex = (maskY * canvas.width + maskX) * 4;
-                        const maskAlpha = maskData.data[maskIndex + 3];
-                        
-                        // Apply mask alpha to text
-                        textData.data[textIndex + 3] = (textData.data[textIndex + 3] * maskAlpha) / 255;
-                      }
-                    }
-                  }
-                  
-                  textCtx.putImageData(textData, 0, 0);
-                  ctx.drawImage(textCanvas, startX, startY);
-                  
-                  yPos += layer.fontSize * layer.lineHeight;
-                }
-              };
-              maskImg.src = maskDataUrl;
-            } else {
-              // No mask, draw text normally
-              const textLines = layer.text.split('\n');
-              let yPos = canvas.height / 2 - (textLines.length - 1) * (layer.fontSize * layer.lineHeight) / 2;
-              
-              for (const line of textLines) {
-                const text = layer.uppercase ? line.toUpperCase() : line;
-                ctx.fillText(text, canvas.width / 2, yPos);
-                yPos += layer.fontSize * layer.lineHeight;
-              }
-            }
-          }}
-        />
-      </div>
-    );
-  }
 
   // UI rendering helpers for layer controls, filters, mask controls, etc.
   function renderLayerControls() {
@@ -920,16 +750,16 @@ export default function EditorPage({ params }: { params: { generationId: string 
     if (!layer) return null;
     if (layer.type === 'text') {
       const tl = layer as TextLayer;
-      return (
-        <div className="p-4 border rounded bg-gray-50 mt-4 space-y-2">
-          <div>
-            <label className="block text-sm font-medium">Text</label>
-            <textarea
+    return (
+      <div className="p-4 border rounded bg-gray-50 mt-4 space-y-2">
+        <div>
+          <label className="block text-sm font-medium">Text</label>
+          <textarea
               value={tl.text}
               onChange={(e) => updateLayer(tl.id, { text: e.target.value })}
-              className="w-full border rounded p-2"
-            />
-          </div>
+            className="w-full border rounded p-2"
+          />
+        </div>
           <div>
             <label className="block text-sm font-medium">Font Family</label>
             <select
@@ -971,13 +801,13 @@ export default function EditorPage({ params }: { params: { generationId: string 
               className="mt-2"
             />
           </div>
-          <div className="flex space-x-2">
-            <div className="flex-1">
-              <label className="block text-sm font-medium">Font size</label>
-              <input
-                type="number"
-                min={8}
-                max={200}
+        <div className="flex space-x-2">
+          <div className="flex-1">
+            <label className="block text-sm font-medium">Font size</label>
+            <input
+              type="number"
+              min={8}
+              max={200}
                 value={tl.fontSize}
                 onChange={(e) => updateLayer(tl.id, { fontSize: parseInt(e.target.value) })}
                 className="w-full border rounded p-1"
@@ -992,23 +822,23 @@ export default function EditorPage({ params }: { params: { generationId: string 
                 step={100}
                 value={tl.fontWeight}
                 onChange={(e) => updateLayer(tl.id, { fontWeight: parseInt(e.target.value) })}
-                className="w-full border rounded p-1"
-              />
-            </div>
-            <div className="flex-1">
-              <label className="block text-sm font-medium">Color</label>
-              <input
-                type="color"
+              className="w-full border rounded p-1"
+            />
+          </div>
+          <div className="flex-1">
+            <label className="block text-sm font-medium">Color</label>
+            <input
+              type="color"
                 value={tl.color}
                 onChange={(e) => updateLayer(tl.id, { color: e.target.value })}
-                className="w-full border rounded p-1"
-              />
-            </div>
+              className="w-full border rounded p-1"
+            />
           </div>
-          <div className="flex space-x-2">
-            <div className="flex-1">
+        </div>
+        <div className="flex space-x-2">
+          <div className="flex-1">
               <label className="block text-sm font-medium">Letter spacing</label>
-              <input
+            <input
                 type="number"
                 min={-5}
                 max={20}
@@ -1016,11 +846,11 @@ export default function EditorPage({ params }: { params: { generationId: string 
                 value={tl.letterSpacing}
                 onChange={(e) => updateLayer(tl.id, { letterSpacing: parseFloat(e.target.value) })}
                 className="w-full border rounded p-1"
-              />
-            </div>
-            <div className="flex-1">
+            />
+          </div>
+          <div className="flex-1">
               <label className="block text-sm font-medium">Line height</label>
-              <input
+            <input
                 type="number"
                 min={0.5}
                 max={3}
@@ -1028,9 +858,9 @@ export default function EditorPage({ params }: { params: { generationId: string 
                 value={tl.lineHeight}
                 onChange={(e) => updateLayer(tl.id, { lineHeight: parseFloat(e.target.value) })}
                 className="w-full border rounded p-1"
-              />
-            </div>
+            />
           </div>
+        </div>
           <div className="flex space-x-2 items-center">
             <input
               type="checkbox"
@@ -1093,12 +923,166 @@ export default function EditorPage({ params }: { params: { generationId: string 
             <label className="text-sm">Outline</label>
             <input
               type="checkbox"
-              checked={tl.blurBehind}
-              onChange={(e) => updateLayer(tl.id, { blurBehind: e.target.checked })}
+              checked={!!tl.blurBehind?.enabled}
+              onChange={(e) => {
+                if (e.target.checked) {
+                  updateLayer(tl.id, {
+                    blurBehind: {
+                      enabled: true,
+                      intensity: 8,
+                      spread: 20,
+                      fade: 30,
+                    },
+                  });
+                } else {
+                  updateLayer(tl.id, { blurBehind: undefined });
+                }
+              }}
               className="ml-4"
             />
             <label className="text-sm">Blur behind</label>
+        </div>
+        
+        {/* Blur behind controls */}
+        {tl.blurBehind?.enabled && (
+          <div className="mt-2 p-2 bg-gray-100 rounded space-y-2">
+            <div>
+              <label className="block text-sm font-medium">Blur Intensity</label>
+              <input
+                type="range"
+                min="1"
+                max="20"
+                value={tl.blurBehind.intensity}
+                onChange={(e) => updateLayer(tl.id, { 
+                  blurBehind: { ...tl.blurBehind, intensity: parseInt(e.target.value) }
+                })}
+                className="w-full"
+              />
+              <span className="text-xs text-gray-600">{tl.blurBehind.intensity}px</span>
+            </div>
+            <div>
+              <label className="block text-sm font-medium">Spread</label>
+              <input
+                type="range"
+                min="5"
+                max="50"
+                value={tl.blurBehind.spread}
+                onChange={(e) => updateLayer(tl.id, { 
+                  blurBehind: { ...tl.blurBehind, spread: parseInt(e.target.value) }
+                })}
+                className="w-full"
+              />
+              <span className="text-xs text-gray-600">{tl.blurBehind.spread}px</span>
+            </div>
+            <div>
+              <label className="block text-sm font-medium">Fade</label>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={tl.blurBehind.fade}
+                onChange={(e) => updateLayer(tl.id, { 
+                  blurBehind: { ...tl.blurBehind, fade: parseInt(e.target.value) }
+                })}
+                className="w-full"
+              />
+              <span className="text-xs text-gray-600">{tl.blurBehind.fade}%</span>
+            </div>
           </div>
+        )}
+        
+        {/* Outline controls */}
+        {tl.outline && (
+          <div className="mt-2 p-2 bg-gray-100 rounded space-y-2">
+            <div>
+              <label className="block text-sm font-medium">Outline Width</label>
+              <input
+                type="range"
+                min="1"
+                max="10"
+                value={tl.outline.width}
+                onChange={(e) => updateLayer(tl.id, { 
+                  outline: { ...tl.outline, width: parseInt(e.target.value) }
+                })}
+                className="w-full"
+              />
+              <span className="text-xs text-gray-600">{tl.outline.width}px</span>
+            </div>
+            <div>
+              <label className="block text-sm font-medium">Outline Color</label>
+              <input
+                type="color"
+                value={tl.outline.color}
+                onChange={(e) => updateLayer(tl.id, { 
+                  outline: { ...tl.outline, color: e.target.value }
+                })}
+                className="w-full h-8 border rounded"
+              />
+            </div>
+          </div>
+        )}
+        
+        {/* Shadow controls */}
+        {tl.shadow && (
+          <div className="mt-2 p-2 bg-gray-100 rounded space-y-2">
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-sm font-medium">Offset X</label>
+                <input
+                  type="range"
+                  min="-20"
+                  max="20"
+                  value={tl.shadow.offsetX}
+                  onChange={(e) => updateLayer(tl.id, { 
+                    shadow: { ...tl.shadow, offsetX: parseInt(e.target.value) }
+                  })}
+                  className="w-full"
+                />
+                <span className="text-xs text-gray-600">{tl.shadow.offsetX}px</span>
+              </div>
+              <div>
+                <label className="block text-sm font-medium">Offset Y</label>
+                <input
+                  type="range"
+                  min="-20"
+                  max="20"
+                  value={tl.shadow.offsetY}
+                  onChange={(e) => updateLayer(tl.id, { 
+                    shadow: { ...tl.shadow, offsetY: parseInt(e.target.value) }
+                  })}
+                  className="w-full"
+                />
+                <span className="text-xs text-gray-600">{tl.shadow.offsetY}px</span>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium">Blur</label>
+              <input
+                type="range"
+                min="0"
+                max="20"
+                value={tl.shadow.blur}
+                onChange={(e) => updateLayer(tl.id, { 
+                  shadow: { ...tl.shadow, blur: parseInt(e.target.value) }
+                })}
+                className="w-full"
+              />
+              <span className="text-xs text-gray-600">{tl.shadow.blur}px</span>
+            </div>
+            <div>
+              <label className="block text-sm font-medium">Shadow Color</label>
+              <input
+                type="color"
+                value={tl.shadow.color}
+                onChange={(e) => updateLayer(tl.id, { 
+                  shadow: { ...tl.shadow, color: e.target.value }
+                })}
+                className="w-full h-8 border rounded"
+              />
+            </div>
+          </div>
+        )}
+        
           <button onClick={handleDeleteSelected} className="text-red-600 text-sm underline">
             Delete layer
           </button>
@@ -1109,10 +1093,10 @@ export default function EditorPage({ params }: { params: { generationId: string 
         <div className="p-4 border rounded bg-gray-50 mt-4 space-y-2">
           <p>Image layer: position, scale, rotation and masking can be edited from the layer panel.</p>
           <button onClick={handleDeleteSelected} className="text-red-600 text-sm underline">
-            Delete layer
-          </button>
-        </div>
-      );
+          Delete layer
+        </button>
+      </div>
+    );
     }
   }
 
@@ -1136,15 +1120,15 @@ export default function EditorPage({ params }: { params: { generationId: string 
         ].map(({ label, key, min, max }) => (
           <div key={key}>
             <label className="block text-sm">{label}</label>
-            <input
-              type="range"
+          <input
+            type="range"
               min={min}
               max={max}
               value={(filters as any)[key]}
               onChange={(e) => updateFilters({ [key]: parseInt(e.target.value) } as any)}
-              className="w-full"
-            />
-          </div>
+            className="w-full"
+          />
+        </div>
         ))}
       </div>
     );
@@ -1204,16 +1188,9 @@ export default function EditorPage({ params }: { params: { generationId: string 
               };
               if (layer.type === 'text') {
                 const tl = layer as TextLayer;
-                
-                // If layer has a mask, use canvas-based rendering
-                if (layer.mask) {
-                  return createMaskedTextElement(tl, layer.mask);
-                }
-                
-                // Otherwise use normal div rendering
                 return (
-                  <div
-                    key={layer.id}
+                <div
+                  key={layer.id}
                     onPointerDown={(e) => {
                       if (tl.locked) return;
                       setSelectedLayerId(layer.id);
@@ -1233,8 +1210,8 @@ export default function EditorPage({ params }: { params: { generationId: string 
                       const y = (e.clientY - containerRect.top - dragInfo.current.offsetY) * scaleY;
                       updateLayer(layer.id, { x, y });
                     }}
-                    className={`absolute whitespace-pre select-none ${isSelected ? 'ring-2 ring-blue-500' : ''}`}
-                    style={{
+                  className={`absolute whitespace-pre select-none ${isSelected ? 'ring-2 ring-blue-500' : ''}`}
+                  style={{
                       // bestaande stijl:
                       ...style,
                       fontFamily: tl.fontFamily,
@@ -1243,7 +1220,7 @@ export default function EditorPage({ params }: { params: { generationId: string 
                       fontStyle: tl.italic ? 'italic' : 'normal',
                       color: tl.autoContrast ? pickAutoContrastColor(image, tl, project) : tl.color,
                       textTransform: tl.uppercase ? 'uppercase' : 'none',
-                      textAlign: 'center',
+                    textAlign: 'center',
                       letterSpacing: `${tl.letterSpacing}px`,
                       lineHeight: tl.lineHeight,
                       // nieuwe eigenschappen:
@@ -1252,13 +1229,29 @@ export default function EditorPage({ params }: { params: { generationId: string 
                         : undefined,
                       WebkitTextStrokeWidth: tl.outline ? `${tl.outline.width}px` : undefined,
                       WebkitTextStrokeColor: tl.outline ? tl.outline.color : undefined,
-                      backdropFilter: tl.blurBehind ? 'blur(4px)' : undefined,
-                      WebkitBackdropFilter: tl.blurBehind ? 'blur(4px)' : undefined,
+                      // Improved blur behind with gradient mask
+                      ...(tl.blurBehind?.enabled && {
+                        backdropFilter: `blur(${tl.blurBehind.intensity}px)`,
+                        WebkitBackdropFilter: `blur(${tl.blurBehind.intensity}px)`,
+                        // Create a gradient mask for smooth fade
+                        mask: `radial-gradient(ellipse ${tl.blurBehind.spread}px ${tl.blurBehind.spread}px at center, black ${100 - tl.blurBehind.fade}%, transparent 100%)`,
+                        WebkitMask: `radial-gradient(ellipse ${tl.blurBehind.spread}px ${tl.blurBehind.spread}px at center, black ${100 - tl.blurBehind.fade}%, transparent 100%)`,
+                        // Add padding to extend the blur area
+                        padding: `${tl.blurBehind.spread}px`,
+                        margin: `-${tl.blurBehind.spread}px`,
+                      }),
+                      // CSS mask for text masking
+                      maskImage: tl.mask ? `url(${tl.mask})` : undefined,
+                      WebkitMaskImage: tl.mask ? `url(${tl.mask})` : undefined,
+                      maskSize: '100% 100%',
+                      WebkitMaskSize: '100% 100%',
+                      maskRepeat: 'no-repeat',
+                      WebkitMaskRepeat: 'no-repeat',
                     }}
                   >
                     {tl.text}
-                  </div>
-                );
+                </div>
+              );
               } else {
                 const il = layer as ImageLayer;
                 return (
