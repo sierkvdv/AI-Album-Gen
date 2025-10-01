@@ -571,7 +571,20 @@ export default function EditorPage({ params }: { params: { generationId: string 
             startY += textLayer.fontSize * textLayer.lineHeight;
           }
           if (textLayer.shadow) {
-            // A second pass for shadows is omitted in export; can be added if desired
+            ctx.save();
+            ctx.shadowOffsetX = textLayer.shadow.offsetX;
+            ctx.shadowOffsetY = textLayer.shadow.offsetY;
+            ctx.shadowBlur = textLayer.shadow.blur;
+            ctx.shadowColor = textLayer.shadow.color;
+            // teken de tekst nogmaals (alleen vulkleur, zonder outline) om de schaduw te genereren
+            const lines = textLayer.text.split('\n');
+            let yPos = -totalHeight / 2 + (textLayer.fontSize * textLayer.lineHeight) / 2;
+            for (const line of lines) {
+              const content = textLayer.uppercase ? line.toUpperCase() : line;
+              drawTextLine(ctx, content, 0, yPos, fillColor, undefined, textLayer.letterSpacing);
+              yPos += textLayer.fontSize * textLayer.lineHeight;
+            }
+            ctx.restore();
           }
         }
         ctx.restore();
