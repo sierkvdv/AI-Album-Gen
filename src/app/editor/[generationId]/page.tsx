@@ -1639,7 +1639,7 @@ export default function EditorPage({ params }: { params: { generationId: string 
                 testDiv.style.width = '200px';
                 testDiv.style.height = '200px';
                 testDiv.style.backgroundColor = 'red';
-                testDiv.style.WebkitMask = `url(${layer.mask}) no-repeat center/100% 100%`;
+                (testDiv.style as any).WebkitMask = `url(${layer.mask}) no-repeat center/100% 100%`;
                 testDiv.style.mask = `url(${layer.mask}) no-repeat center/100% 100%`;
                 testDiv.style.border = '2px solid blue';
                 testDiv.style.zIndex = '9999';
