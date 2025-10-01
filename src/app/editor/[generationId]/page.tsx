@@ -1426,18 +1426,25 @@ export default function EditorPage({ params }: { params: { generationId: string 
                         padding: `${tl.blurBehind.spread}px`,
                         margin: `-${tl.blurBehind.spread}px`,
                       }),
-                      // CSS mask for text masking - try simpler approach
+                      // CSS mask for text masking - try different approach
                       ...(tl.mask && (() => {
                         console.log('Applying mask to text layer:', {
                           layerId: tl.id,
                           maskLength: tl.mask.length,
                           maskPreview: tl.mask.substring(0, 50) + '...',
-                          hasMask: !!tl.mask
+                          hasMask: !!tl.mask,
+                          textContent: tl.text
                         });
                         return {
-                          // Try simple mask syntax
-                          WebkitMask: `url(${tl.mask}) no-repeat center/100% 100%`,
-                          mask: `url(${tl.mask}) no-repeat center/100% 100%`,
+                          // Try different mask syntax
+                          WebkitMaskImage: `url(${tl.mask})`,
+                          maskImage: `url(${tl.mask})`,
+                          WebkitMaskSize: '100% 100%',
+                          maskSize: '100% 100%',
+                          WebkitMaskRepeat: 'no-repeat',
+                          maskRepeat: 'no-repeat',
+                          WebkitMaskPosition: 'center',
+                          maskPosition: 'center',
                           // Add fallback for testing
                           backgroundColor: 'rgba(255,0,0,0.3)', // Red tint to see if mask is applied
                         };
@@ -1559,6 +1566,22 @@ export default function EditorPage({ params }: { params: { generationId: string 
               }
             }} className="px-3 py-1 bg-red-600 text-white rounded">
               Debug Mask
+            </button>
+            <button onClick={() => {
+              if (project) {
+                console.log('All layers and their masks:');
+                project.layers.forEach((layer, index) => {
+                  console.log(`Layer ${index + 1}:`, {
+                    id: layer.id,
+                    name: layer.name,
+                    type: layer.type,
+                    hasMask: !!layer.mask,
+                    maskLength: layer.mask?.length || 0
+                  });
+                });
+              }
+            }} className="px-3 py-1 bg-orange-600 text-white rounded">
+              List Masks
             </button>
             <button onClick={() => {
               if (selectedLayerId && project) {
