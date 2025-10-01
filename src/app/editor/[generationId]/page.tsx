@@ -389,14 +389,17 @@ export default function EditorPage({ params }: { params: { generationId: string 
           proj = savedProject;
         }
 
-        // 3. Op dit punt is proj gegarandeerd niet null -> veilig gebruiken
+        // 3. Vanaf hier weet je zeker dat proj niet null is
+        const resolvedProj: ProjectState = proj;
+
+        // Laad de basisafbeelding van resolvedProj
         const baseImg = new Image();
         baseImg.crossOrigin = 'anonymous';
-        baseImg.src = proj.baseAssetUrl;
+        baseImg.src = resolvedProj.baseAssetUrl;
         await baseImg.decode();
 
         if (!cancelled) {
-          setProject(proj);
+          setProject(resolvedProj);
           setImage(baseImg);
         }
       } catch (err) {
