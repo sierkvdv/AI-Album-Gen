@@ -379,6 +379,46 @@ export default function EditorPage({ params }: { params: { generationId: string 
           img.crossOrigin = 'anonymous';
           img.src = generation.imageUrl;
           await img.decode();
+          // Create default layers
+          const defaultImageLayer: ImageLayer = {
+            id: `img_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            name: 'Image 1',
+            type: 'image',
+            src: generation.imageUrl,
+            x: img.naturalWidth / 2,
+            y: img.naturalHeight / 2,
+            scale: 1,
+            rotation: 0,
+            opacity: 1,
+            visible: true,
+            locked: false,
+            zIndex: 1,
+          };
+
+          const defaultTextLayer: TextLayer = {
+            id: `txt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            name: 'Text 1',
+            type: 'text',
+            text: 'New Text',
+            fontFamily: 'sans-serif',
+            fontSize: 32,
+            fontWeight: 400,
+            italic: false,
+            color: '#ffffff',
+            uppercase: false,
+            letterSpacing: 0,
+            lineHeight: 1.2,
+            autoContrast: false,
+            x: img.naturalWidth / 2,
+            y: img.naturalHeight / 2,
+            scale: 1,
+            rotation: 0,
+            opacity: 1,
+            visible: true,
+            locked: false,
+            zIndex: 2,
+          };
+
           proj = {
             id: `proj_${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${Math.random().toString(36).substr(2, 9)}`,
             baseAssetUrl: generation.imageUrl,
@@ -386,7 +426,7 @@ export default function EditorPage({ params }: { params: { generationId: string 
             baseHeight: img.naturalHeight,
             crop: { aspect: '1:1', x: 0, y: 0, scale: 1 },
             filters: { brightness: 100, contrast: 100, saturation: 100, hue: 0, vignette: 0, grain: 0, blur: 0 },
-            layers: [],
+            layers: [defaultImageLayer, defaultTextLayer],
           };
           const newProjRes = await fetch('/api/projects/new', {
             method: 'POST',
@@ -1179,13 +1219,6 @@ export default function EditorPage({ params }: { params: { generationId: string 
               dragInfo.current = null;
             }}
           >
-            {/* Base image with filters */}
-            <img
-              src={project.baseAssetUrl}
-              alt="Base"
-              className="absolute inset-0 w-full h-full object-cover"
-              style={{ filter: computeCssFilters(project.filters) }}
-            />
             {/* Image & text layers */}
             {project.layers.map((layer) => {
               if (!layer.visible) return null;
@@ -1283,7 +1316,20 @@ export default function EditorPage({ params }: { params: { generationId: string 
                     key={il.id}
                     src={il.src}
                     className={`absolute select-none ${isSelected ? 'ring-2 ring-blue-500' : ''}`}
-                    style={style}
+                    style={{
+                      ...style,
+                      // Apply mask to image layer
+                      ...(il.mask && {
+                        maskImage: `url(${il.mask})`,
+                        WebkitMaskImage: `url(${il.mask})`,
+                        maskSize: '100% 100%',
+                        WebkitMaskSize: '100% 100%',
+                        maskRepeat: 'no-repeat',
+                        WebkitMaskRepeat: 'no-repeat',
+                        maskPosition: 'center',
+                        WebkitMaskPosition: 'center',
+                      }),
+                    }}
                     onPointerDown={(e) => {
                       if (il.locked) return;
                       setSelectedLayerId(il.id);
@@ -1334,6 +1380,7 @@ export default function EditorPage({ params }: { params: { generationId: string 
                 <div className="absolute top-4 left-4 bg-black bg-opacity-75 text-white p-2 rounded text-sm">
                   <div>Mask Mode: {maskMode === 'erase' ? 'Verbergen (zwart)' : 'Tonen (wit)'}</div>
                   <div>Brush Size: {maskBrushSize}px</div>
+                  <div>Layer: {project.layers.find(l => l.id === maskEditingLayerId)?.name}</div>
                   <div>Zwart = verborgen, Wit = zichtbaar</div>
                 </div>
               </div>
