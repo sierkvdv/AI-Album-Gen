@@ -637,8 +637,8 @@ export default function EditorPage({ params }: { params: { generationId: string 
       // Set up canvas for better mask editing
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
-      // Start with a black background (fully hidden)
-      ctx.fillStyle = 'black';
+      // Start with a white background (fully visible)
+      ctx.fillStyle = 'white';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       
       const layer = project.layers.find((l) => l.id === layerId) as Layer | undefined;
@@ -686,22 +686,48 @@ export default function EditorPage({ params }: { params: { generationId: string 
     ctx.arc(x, y, radius, 0, Math.PI * 2);
     ctx.closePath();
     ctx.fill();
+    
+    // Update mask in real-time after each brush stroke
+    if (maskEditingLayerId) {
+      const dataUrl = canvas.toDataURL('image/png');
+      updateLayer(maskEditingLayerId, { mask: dataUrl });
+    }
   }
   function resetMask() {
     const ctx = maskCtxRef.current;
     if (!ctx || !project || !maskEditingLayerId) return;
     ctx.clearRect(0, 0, project.baseWidth, project.baseHeight);
+    
+    // Fill with white (fully visible)
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, project.baseWidth, project.baseHeight);
+    
+    // Update mask in real-time after reset
+    const canvas = maskCanvasRef.current;
+    if (canvas) {
+      const dataUrl = canvas.toDataURL('image/png');
+      updateLayer(maskEditingLayerId, { mask: dataUrl });
+    }
   }
   function invertMask() {
     const ctx = maskCtxRef.current;
     if (!ctx || !project || !maskEditingLayerId) return;
     const data = ctx.getImageData(0, 0, project.baseWidth, project.baseHeight);
     for (let i = 0; i < data.data.length; i += 4) {
-      data.data[i] = 255 - data.data[i];
-      data.data[i + 1] = 255 - data.data[i + 1];
-      data.data[i + 2] = 255 - data.data[i + 2];
+      // Invert only RGB channels, keep alpha unchanged
+      data.data[i] = 255 - data.data[i];     // Red
+      data.data[i + 1] = 255 - data.data[i + 1]; // Green
+      data.data[i + 2] = 255 - data.data[i + 2]; // Blue
+      // data.data[i + 3] remains unchanged (alpha)
     }
     ctx.putImageData(data, 0, 0);
+    
+    // Update mask in real-time after inversion
+    const canvas = maskCanvasRef.current;
+    if (canvas) {
+      const dataUrl = canvas.toDataURL('image/png');
+      updateLayer(maskEditingLayerId, { mask: dataUrl });
+    }
   }
 
   // UI rendering helpers for layer controls, filters, mask controls, etc.
@@ -973,24 +999,6 @@ export default function EditorPage({ params }: { params: { generationId: string 
               dragInfo.current = null;
             }}
           >
-            {/* SVG definitions for masks */}
-            <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: -1 }}>
-              <defs>
-                {project.layers.map((layer) => {
-                  if (!layer.mask) return null;
-                  return (
-                    <mask key={`mask-${layer.id}`} id={`mask-${layer.id}`}>
-                      <image
-                        href={layer.mask}
-                        width="100%"
-                        height="100%"
-                        preserveAspectRatio="none"
-                      />
-                    </mask>
-                  );
-                })}
-              </defs>
-            </svg>
             {/* Base image with filters */}
             <img
               src={project.baseAssetUrl}
@@ -1008,8 +1016,8 @@ export default function EditorPage({ params }: { params: { generationId: string 
                 transform: `translate(-50%, -50%) rotate(${layer.rotation}deg) scale(${layer.scale})`,
                 opacity: layer.opacity,
                 ...(layer.mask && { 
-                  clipPath: `url(#mask-${layer.id})`,
-                  WebkitClipPath: `url(#mask-${layer.id})`
+                  WebkitMask: `url(${layer.mask}) no-repeat center/cover`,
+                  mask: `url(${layer.mask}) no-repeat center/cover`
                 })
               } as any;
               if (layer.type === 'text') {
