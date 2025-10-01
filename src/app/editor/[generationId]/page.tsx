@@ -486,11 +486,18 @@ export default function EditorPage({ params }: { params: { generationId: string 
 
   // Helper to update a layer
   function updateLayer(id: string, update: Partial<Layer>) {
+    console.log('updateLayer called:', { id, update });
     setProject((prev) => {
       if (!prev) return prev;
       const newLayers = prev.layers.map((layer) =>
         layer.id === id ? { ...layer, ...update } as Layer : layer,
       );
+      console.log('updateLayer result:', { 
+        layerId: id, 
+        hasMask: update.mask ? true : false,
+        maskLength: update.mask?.length || 0,
+        newLayersCount: newLayers.length
+      });
       return { ...prev, layers: newLayers };
     });
   }
@@ -771,6 +778,11 @@ export default function EditorPage({ params }: { params: { generationId: string 
     ctx.fill();
     
     const dataUrl = canvas.toDataURL('image/png');
+    console.log('Test mask created, calling updateLayer:', {
+      selectedLayerId,
+      dataUrlLength: dataUrl.length,
+      dataUrlPreview: dataUrl.substring(0, 100) + '...'
+    });
     updateLayer(selectedLayerId, { mask: dataUrl });
     console.log('Test mask created:', dataUrl.substring(0, 100) + '...');
     
