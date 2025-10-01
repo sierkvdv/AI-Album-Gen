@@ -561,7 +561,7 @@ export default function EditorPage({ params }: { params: { generationId: string 
             ctx.filter = `blur(${textLayer.blurBehind.intensity}px)`;
             ctx.fillStyle = 'rgba(0,0,0,0.3)';
             ctx.fillRect(-size, -size, size * 2, size * 2);
-            ctx.restore();
+        ctx.restore();
           }
           // Split text into lines
           const lines = textLayer.text.split('\n');
@@ -803,8 +803,8 @@ export default function EditorPage({ params }: { params: { generationId: string 
                 reader.readAsDataURL(file);
               }}
               className="mt-2"
-            />
-          </div>
+          />
+        </div>
         <div className="flex space-x-2">
           <div className="flex-1">
             <label className="block text-sm font-medium">Font size</label>
@@ -952,35 +952,35 @@ export default function EditorPage({ params }: { params: { generationId: string 
           <div className="mt-2 p-2 bg-gray-100 rounded space-y-2">
             <div>
               <label className="block text-sm font-medium">Blur Intensity</label>
-              <input
-                type="range"
+            <input
+              type="range"
                 min="1"
                 max="20"
                 value={tl.blurBehind.intensity}
                 onChange={(e) => updateLayer(tl.id, { 
                   blurBehind: tl.blurBehind ? { ...tl.blurBehind, intensity: parseInt(e.target.value) } : undefined
                 })}
-                className="w-full"
-              />
+              className="w-full"
+            />
               <span className="text-xs text-gray-600">{tl.blurBehind.intensity}px</span>
-            </div>
+          </div>
             <div>
               <label className="block text-sm font-medium">Spread</label>
-              <input
-                type="range"
+            <input
+              type="range"
                 min="5"
                 max="50"
                 value={tl.blurBehind.spread}
                 onChange={(e) => updateLayer(tl.id, { 
                   blurBehind: tl.blurBehind ? { ...tl.blurBehind, spread: parseInt(e.target.value) } : undefined
                 })}
-                className="w-full"
-              />
+              className="w-full"
+            />
               <span className="text-xs text-gray-600">{tl.blurBehind.spread}px</span>
-            </div>
+          </div>
             <div>
               <label className="block text-sm font-medium">Fade</label>
-              <input
+            <input
                 type="range"
                 min="0"
                 max="100"
@@ -991,28 +991,28 @@ export default function EditorPage({ params }: { params: { generationId: string 
                 className="w-full"
               />
               <span className="text-xs text-gray-600">{tl.blurBehind.fade}%</span>
-            </div>
           </div>
+        </div>
         )}
         
         {/* Outline controls */}
         {tl.outline && (
           <div className="mt-2 p-2 bg-gray-100 rounded space-y-2">
-            <div>
+        <div>
               <label className="block text-sm font-medium">Outline Width</label>
-              <input
-                type="range"
+          <input
+            type="range"
                 min="1"
                 max="10"
                 value={tl.outline.width}
                 onChange={(e) => updateLayer(tl.id, { 
                   outline: tl.outline ? { ...tl.outline, width: parseInt(e.target.value) } : undefined
                 })}
-                className="w-full"
-              />
+            className="w-full"
+          />
               <span className="text-xs text-gray-600">{tl.outline.width}px</span>
-            </div>
-            <div>
+        </div>
+        <div>
               <label className="block text-sm font-medium">Outline Color</label>
               <input
                 type="color"
@@ -1032,48 +1032,48 @@ export default function EditorPage({ params }: { params: { generationId: string 
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="block text-sm font-medium">Offset X</label>
-                <input
-                  type="range"
+          <input
+            type="range"
                   min="-20"
                   max="20"
                   value={tl.shadow.offsetX}
                   onChange={(e) => updateLayer(tl.id, { 
                     shadow: tl.shadow ? { ...tl.shadow, offsetX: parseInt(e.target.value) } : undefined
                   })}
-                  className="w-full"
-                />
+            className="w-full"
+          />
                 <span className="text-xs text-gray-600">{tl.shadow.offsetX}px</span>
-              </div>
-              <div>
+        </div>
+        <div>
                 <label className="block text-sm font-medium">Offset Y</label>
-                <input
-                  type="range"
+          <input
+            type="range"
                   min="-20"
                   max="20"
                   value={tl.shadow.offsetY}
                   onChange={(e) => updateLayer(tl.id, { 
                     shadow: tl.shadow ? { ...tl.shadow, offsetY: parseInt(e.target.value) } : undefined
                   })}
-                  className="w-full"
-                />
+            className="w-full"
+          />
                 <span className="text-xs text-gray-600">{tl.shadow.offsetY}px</span>
               </div>
-            </div>
-            <div>
+        </div>
+        <div>
               <label className="block text-sm font-medium">Blur</label>
-              <input
-                type="range"
+          <input
+            type="range"
                 min="0"
                 max="20"
                 value={tl.shadow.blur}
                 onChange={(e) => updateLayer(tl.id, { 
                   shadow: tl.shadow ? { ...tl.shadow, blur: parseInt(e.target.value) } : undefined
                 })}
-                className="w-full"
-              />
+            className="w-full"
+          />
               <span className="text-xs text-gray-600">{tl.shadow.blur}px</span>
-            </div>
-            <div>
+        </div>
+        <div>
               <label className="block text-sm font-medium">Shadow Color</label>
               <input
                 type="color"
@@ -1188,11 +1188,11 @@ export default function EditorPage({ params }: { params: { generationId: string 
                 opacity: layer.opacity,
                 zIndex: layer.zIndex,
                 position: 'absolute' as const,
-                pointerEvents: isSelected ? 'auto' : 'none',
+                pointerEvents: (isSelected ? 'auto' : 'none') as 'auto' | 'none',
               };
               if (layer.type === 'text') {
                 const tl = layer as TextLayer;
-                return (
+              return (
                 <div
                   key={layer.id}
                     onPointerDown={(e) => {
