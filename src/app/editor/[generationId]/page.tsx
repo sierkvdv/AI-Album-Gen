@@ -673,12 +673,26 @@ export default function EditorPage({ params }: { params: { generationId: string 
   function moveLayer(id: string, delta: number) {
     setProject((prev) => {
       if (!prev) return prev;
-      const idx = prev.layers.findIndex((l) => l.id === id);
-      if (idx < 0) return prev;
-      const newIdx = Math.min(Math.max(0, idx + delta), prev.layers.length - 1);
-      const newLayers = [...prev.layers];
-      const [item] = newLayers.splice(idx, 1);
-      newLayers.splice(newIdx, 0, item);
+      const layer = prev.layers.find((l) => l.id === id);
+      if (!layer) return prev;
+      
+      // Get all zIndex values and sort them
+      const zIndexes = prev.layers.map(l => l.zIndex).sort((a, b) => a - b);
+      const currentZIndex = layer.zIndex;
+      const currentIndex = zIndexes.indexOf(currentZIndex);
+      
+      // Calculate new zIndex
+      const newIndex = Math.min(Math.max(0, currentIndex + delta), zIndexes.length - 1);
+      const newZIndex = zIndexes[newIndex];
+      
+      // If moving to the same position, don't change anything
+      if (newZIndex === currentZIndex) return prev;
+      
+      // Update the layer's zIndex
+      const newLayers = prev.layers.map(l => 
+        l.id === id ? { ...l, zIndex: newZIndex } : l
+      );
+      
       return { ...prev, layers: newLayers };
     });
   }
@@ -1314,7 +1328,9 @@ export default function EditorPage({ params }: { params: { generationId: string 
             />
             )}
             {/* Image & text layers */}
-            {project.layers.map((layer) => {
+            {project.layers
+              .sort((a, b) => a.zIndex - b.zIndex)
+              .map((layer) => {
               if (!layer.visible) return null;
               const isSelected = layer.id === selectedLayerId;
               const style = {
@@ -1382,8 +1398,14 @@ export default function EditorPage({ params }: { params: { generationId: string 
                       }),
                       // Apply mask to text layer
                       ...(tl.mask && {
-                        WebkitMask: `url(${tl.mask}) no-repeat center/100% 100%`,
-                        mask: `url(${tl.mask}) no-repeat center/100% 100%`,
+                        WebkitMaskImage: `url(${tl.mask})`,
+                        maskImage: `url(${tl.mask})`,
+                        WebkitMaskSize: '100% 100%',
+                        maskSize: '100% 100%',
+                        WebkitMaskRepeat: 'no-repeat',
+                        maskRepeat: 'no-repeat',
+                        WebkitMaskPosition: 'center',
+                        maskPosition: 'center',
                         WebkitMaskType: 'luminance',
                         maskType: 'luminance',
                       }),
@@ -1405,8 +1427,14 @@ export default function EditorPage({ params }: { params: { generationId: string 
                       filter: computeCssFilters(project.filters),
                       // Apply mask to image layer
                       ...(il.mask && {
-                        WebkitMask: `url(${il.mask}) no-repeat center/100% 100%`,
-                        mask: `url(${il.mask}) no-repeat center/100% 100%`,
+                        WebkitMaskImage: `url(${il.mask})`,
+                        maskImage: `url(${il.mask})`,
+                        WebkitMaskSize: '100% 100%',
+                        maskSize: '100% 100%',
+                        WebkitMaskRepeat: 'no-repeat',
+                        maskRepeat: 'no-repeat',
+                        WebkitMaskPosition: 'center',
+                        maskPosition: 'center',
                         WebkitMaskType: 'luminance',
                         maskType: 'luminance',
                       }),
@@ -1535,7 +1563,9 @@ export default function EditorPage({ params }: { params: { generationId: string 
           {/* Layer panel */}
           <div className="p-4 border rounded bg-gray-50 space-y-2">
             <h3 className="font-semibold">Layers</h3>
-            {project.layers.map((layer) => (
+            {project.layers
+              .sort((a, b) => b.zIndex - a.zIndex) // Reverse order for layers panel (top layer first)
+              .map((layer) => (
               <div
                 key={layer.id}
                 className={`flex items-center justify-between p-1 rounded cursor-pointer ${selectedLayerId === layer.id ? 'bg-blue-100' : ''
