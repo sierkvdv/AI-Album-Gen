@@ -673,26 +673,12 @@ export default function EditorPage({ params }: { params: { generationId: string 
   function moveLayer(id: string, delta: number) {
     setProject((prev) => {
       if (!prev) return prev;
-      const layer = prev.layers.find((l) => l.id === id);
-      if (!layer) return prev;
-      
-      // Get all zIndex values and sort them
-      const zIndexes = prev.layers.map(l => l.zIndex).sort((a, b) => a - b);
-      const currentZIndex = layer.zIndex;
-      const currentIndex = zIndexes.indexOf(currentZIndex);
-      
-      // Calculate new zIndex
-      const newIndex = Math.min(Math.max(0, currentIndex + delta), zIndexes.length - 1);
-      const newZIndex = zIndexes[newIndex];
-      
-      // If moving to the same position, don't change anything
-      if (newZIndex === currentZIndex) return prev;
-      
-      // Update the layer's zIndex
-      const newLayers = prev.layers.map(l => 
-        l.id === id ? { ...l, zIndex: newZIndex } : l
-      );
-      
+      const idx = prev.layers.findIndex((l) => l.id === id);
+      if (idx < 0) return prev;
+      const newIdx = Math.min(Math.max(0, idx + delta), prev.layers.length - 1);
+      const newLayers = [...prev.layers];
+      const [item] = newLayers.splice(idx, 1);
+      newLayers.splice(newIdx, 0, item);
       return { ...prev, layers: newLayers };
     });
   }
@@ -1328,9 +1314,7 @@ export default function EditorPage({ params }: { params: { generationId: string 
             />
             )}
             {/* Image & text layers */}
-            {project.layers
-              .sort((a, b) => a.zIndex - b.zIndex)
-              .map((layer) => {
+            {project.layers.map((layer) => {
               if (!layer.visible) return null;
               const isSelected = layer.id === selectedLayerId;
               const style = {
@@ -1396,18 +1380,12 @@ export default function EditorPage({ params }: { params: { generationId: string 
                         padding: `${tl.blurBehind.spread}px`,
                         margin: `-${tl.blurBehind.spread}px`,
                       }),
-                      // Apply mask to text layer
+                      // Apply mask to text layer - test with simple approach
                       ...(tl.mask && {
-                        WebkitMaskImage: `url(${tl.mask})`,
-                        maskImage: `url(${tl.mask})`,
-                        WebkitMaskSize: '100% 100%',
-                        maskSize: '100% 100%',
-                        WebkitMaskRepeat: 'no-repeat',
-                        maskRepeat: 'no-repeat',
-                        WebkitMaskPosition: 'center',
-                        maskPosition: 'center',
-                        WebkitMaskType: 'luminance',
-                        maskType: 'luminance',
+                        WebkitMask: `url(${tl.mask})`,
+                        mask: `url(${tl.mask})`,
+                        // Add a red background to see if mask is applied
+                        backgroundColor: 'rgba(255,0,0,0.5)',
                       }),
                     }}
                   >
@@ -1425,18 +1403,10 @@ export default function EditorPage({ params }: { params: { generationId: string 
                       ...style,
                       // Apply filters to image layer
                       filter: computeCssFilters(project.filters),
-                      // Apply mask to image layer
+                      // Apply mask to image layer - test with simple approach
                       ...(il.mask && {
-                        WebkitMaskImage: `url(${il.mask})`,
-                        maskImage: `url(${il.mask})`,
-                        WebkitMaskSize: '100% 100%',
-                        maskSize: '100% 100%',
-                        WebkitMaskRepeat: 'no-repeat',
-                        maskRepeat: 'no-repeat',
-                        WebkitMaskPosition: 'center',
-                        maskPosition: 'center',
-                        WebkitMaskType: 'luminance',
-                        maskType: 'luminance',
+                        WebkitMask: `url(${il.mask})`,
+                        mask: `url(${il.mask})`,
                       }),
                     }}
                     onPointerDown={(e) => {
@@ -1508,6 +1478,34 @@ export default function EditorPage({ params }: { params: { generationId: string 
             <button onClick={handleAddImage} className="px-3 py-1 bg-blue-600 text-white rounded">
               Add Image
             </button>
+            <button onClick={() => {
+              if (!project || !selectedLayerId) return;
+              const layer = project.layers.find(l => l.id === selectedLayerId);
+              if (!layer) return;
+              
+              // Create a simple test mask
+              const canvas = document.createElement('canvas');
+              canvas.width = 200;
+              canvas.height = 200;
+              const ctx = canvas.getContext('2d');
+              if (!ctx) return;
+              
+              // Fill with white
+              ctx.fillStyle = 'white';
+              ctx.fillRect(0, 0, 200, 200);
+              
+              // Draw black circle in center
+              ctx.fillStyle = 'black';
+              ctx.beginPath();
+              ctx.arc(100, 100, 50, 0, Math.PI * 2);
+              ctx.fill();
+              
+              const dataUrl = canvas.toDataURL('image/png');
+              updateLayer(selectedLayerId, { mask: dataUrl });
+              console.log('Simple test mask created:', dataUrl.substring(0, 100) + '...');
+            }} className="px-3 py-1 bg-orange-600 text-white rounded">
+              Test Mask
+            </button>
             <button onClick={handleSave} className="px-3 py-1 bg-green-600 text-white rounded">
               Save
             </button>
@@ -1563,9 +1561,7 @@ export default function EditorPage({ params }: { params: { generationId: string 
           {/* Layer panel */}
           <div className="p-4 border rounded bg-gray-50 space-y-2">
             <h3 className="font-semibold">Layers</h3>
-            {project.layers
-              .sort((a, b) => b.zIndex - a.zIndex) // Reverse order for layers panel (top layer first)
-              .map((layer) => (
+            {project.layers.map((layer) => (
               <div
                 key={layer.id}
                 className={`flex items-center justify-between p-1 rounded cursor-pointer ${selectedLayerId === layer.id ? 'bg-blue-100' : ''
