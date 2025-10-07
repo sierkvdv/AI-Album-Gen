@@ -1381,29 +1381,19 @@ export default function EditorPage({ params }: { params: { generationId: string 
                     textAlign: 'center',
                       letterSpacing: `${tl.letterSpacing}px`,
                       lineHeight: tl.lineHeight,
-                      // Combined textShadow for outline and shadow
-                      textShadow: (() => {
-                        const shadows: string[] = [];
-                        // Add outline shadows
-                        if (tl.outline) {
-                          shadows.push(
-                            `-${tl.outline.width}px -${tl.outline.width}px 0 ${tl.outline.color}`,
-                            `${tl.outline.width}px -${tl.outline.width}px 0 ${tl.outline.color}`,
-                            `-${tl.outline.width}px ${tl.outline.width}px 0 ${tl.outline.color}`,
-                            `${tl.outline.width}px ${tl.outline.width}px 0 ${tl.outline.color}`
-                          );
-                        }
-                        // Add drop shadow
-                        if (tl.shadow) {
-                          shadows.push(`${tl.shadow.offsetX}px ${tl.shadow.offsetY}px ${tl.shadow.blur}px ${tl.shadow.color}`);
-                        }
-                        return shadows.length > 0 ? shadows.join(', ') : undefined;
-                      })(),
-                      // Simple blur behind effect
+                      // Text shadow for drop shadow only
+                      textShadow: tl.shadow
+                        ? `${tl.shadow.offsetX}px ${tl.shadow.offsetY}px ${tl.shadow.blur}px ${tl.shadow.color}`
+                        : undefined,
+                      // Outline using WebkitTextStroke (inward)
+                      WebkitTextStrokeWidth: tl.outline ? `${tl.outline.width}px` : undefined,
+                      WebkitTextStrokeColor: tl.outline ? tl.outline.color : undefined,
+                      // Blur behind effect with proper fade
                       ...(tl.blurBehind?.enabled && {
                         backdropFilter: `blur(${tl.blurBehind.intensity}px)`,
                         WebkitBackdropFilter: `blur(${tl.blurBehind.intensity}px)`,
-                        backgroundColor: `rgba(0,0,0,${(100 - tl.blurBehind.fade) / 100 * 0.3})`,
+                        // Create a gradient background for smooth fade
+                        background: `radial-gradient(ellipse ${tl.blurBehind.spread}px ${tl.blurBehind.spread}px at center, rgba(0,0,0,${(100 - tl.blurBehind.fade) / 100 * 0.3}) 0%, rgba(0,0,0,${(100 - tl.blurBehind.fade) / 100 * 0.1}) 70%, transparent 100%)`,
                         padding: `${tl.blurBehind.spread}px`,
                         margin: `-${tl.blurBehind.spread}px`,
                         borderRadius: `${tl.blurBehind.spread}px`,
