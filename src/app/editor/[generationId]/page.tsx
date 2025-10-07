@@ -673,12 +673,34 @@ export default function EditorPage({ params }: { params: { generationId: string 
   function moveLayer(id: string, delta: number) {
     setProject((prev) => {
       if (!prev) return prev;
-      const idx = prev.layers.findIndex((l) => l.id === id);
-      if (idx < 0) return prev;
-      const newIdx = Math.min(Math.max(0, idx + delta), prev.layers.length - 1);
-      const newLayers = [...prev.layers];
-      const [item] = newLayers.splice(idx, 1);
-      newLayers.splice(newIdx, 0, item);
+      
+      // Find the layer to move
+      const layerToMove = prev.layers.find((l) => l.id === id);
+      if (!layerToMove) return prev;
+      
+      // Get all layers sorted by zIndex
+      const sortedLayers = [...prev.layers].sort((a, b) => a.zIndex - b.zIndex);
+      const currentIndex = sortedLayers.findIndex(l => l.id === id);
+      
+      // Calculate new position
+      const newIndex = Math.min(Math.max(0, currentIndex + delta), sortedLayers.length - 1);
+      
+      // If moving to the same position, don't change anything
+      if (newIndex === currentIndex) return prev;
+      
+      // Get the layer at the new position
+      const targetLayer = sortedLayers[newIndex];
+      
+      // Swap zIndex values
+      const newLayers = prev.layers.map(layer => {
+        if (layer.id === id) {
+          return { ...layer, zIndex: targetLayer.zIndex };
+        } else if (layer.id === targetLayer.id) {
+          return { ...layer, zIndex: layerToMove.zIndex };
+        }
+        return layer;
+      });
+      
       return { ...prev, layers: newLayers };
     });
   }
@@ -1314,7 +1336,9 @@ export default function EditorPage({ params }: { params: { generationId: string 
             />
             )}
             {/* Image & text layers */}
-            {project.layers.map((layer) => {
+            {project.layers
+              .sort((a, b) => a.zIndex - b.zIndex) // Sort by zIndex, lowest first (bottom to top)
+              .map((layer) => {
               if (!layer.visible) return null;
               const isSelected = layer.id === selectedLayerId;
               const style = {
@@ -1561,7 +1585,9 @@ export default function EditorPage({ params }: { params: { generationId: string 
           {/* Layer panel */}
           <div className="p-4 border rounded bg-gray-50 space-y-2">
             <h3 className="font-semibold">Layers</h3>
-            {project.layers.map((layer) => (
+            {project.layers
+              .sort((a, b) => b.zIndex - a.zIndex) // Sort by zIndex, highest first
+              .map((layer) => (
               <div
                 key={layer.id}
                 className={`flex items-center justify-between p-1 rounded cursor-pointer ${selectedLayerId === layer.id ? 'bg-blue-100' : ''
