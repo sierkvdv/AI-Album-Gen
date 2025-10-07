@@ -1381,22 +1381,32 @@ export default function EditorPage({ params }: { params: { generationId: string 
                     textAlign: 'center',
                       letterSpacing: `${tl.letterSpacing}px`,
                       lineHeight: tl.lineHeight,
-                      // nieuwe eigenschappen:
-                      textShadow: tl.shadow
-                        ? `${tl.shadow.offsetX}px ${tl.shadow.offsetY}px ${tl.shadow.blur}px ${tl.shadow.color}`
-                        : undefined,
-                      WebkitTextStrokeWidth: tl.outline ? `${tl.outline.width}px` : undefined,
-                      WebkitTextStrokeColor: tl.outline ? tl.outline.color : undefined,
-                      // Improved blur behind with gradient mask
+                      // Combined textShadow for outline and shadow
+                      textShadow: (() => {
+                        const shadows = [];
+                        // Add outline shadows
+                        if (tl.outline) {
+                          shadows.push(
+                            `-${tl.outline.width}px -${tl.outline.width}px 0 ${tl.outline.color}`,
+                            `${tl.outline.width}px -${tl.outline.width}px 0 ${tl.outline.color}`,
+                            `-${tl.outline.width}px ${tl.outline.width}px 0 ${tl.outline.color}`,
+                            `${tl.outline.width}px ${tl.outline.width}px 0 ${tl.outline.color}`
+                          );
+                        }
+                        // Add drop shadow
+                        if (tl.shadow) {
+                          shadows.push(`${tl.shadow.offsetX}px ${tl.shadow.offsetY}px ${tl.shadow.blur}px ${tl.shadow.color}`);
+                        }
+                        return shadows.length > 0 ? shadows.join(', ') : undefined;
+                      })(),
+                      // Simple blur behind effect
                       ...(tl.blurBehind?.enabled && {
                         backdropFilter: `blur(${tl.blurBehind.intensity}px)`,
                         WebkitBackdropFilter: `blur(${tl.blurBehind.intensity}px)`,
-                        // Create a gradient mask for smooth fade
-                        mask: `radial-gradient(ellipse ${tl.blurBehind.spread}px ${tl.blurBehind.spread}px at center, black ${100 - tl.blurBehind.fade}%, transparent 100%)`,
-                        WebkitMask: `radial-gradient(ellipse ${tl.blurBehind.spread}px ${tl.blurBehind.spread}px at center, black ${100 - tl.blurBehind.fade}%, transparent 100%)`,
-                        // Add padding to extend the blur area
+                        backgroundColor: `rgba(0,0,0,${(100 - tl.blurBehind.fade) / 100 * 0.3})`,
                         padding: `${tl.blurBehind.spread}px`,
                         margin: `-${tl.blurBehind.spread}px`,
+                        borderRadius: `${tl.blurBehind.spread}px`,
                       }),
                       // Apply mask to text layer - test with simple approach
                       ...(tl.mask && {
