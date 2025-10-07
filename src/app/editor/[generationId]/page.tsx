@@ -1383,7 +1383,7 @@ export default function EditorPage({ params }: { params: { generationId: string 
                       lineHeight: tl.lineHeight,
                       // Combined textShadow for outline and shadow
                       textShadow: (() => {
-                        const shadows = [];
+                        const shadows: string[] = [];
                         // Add outline shadows
                         if (tl.outline) {
                           shadows.push(
