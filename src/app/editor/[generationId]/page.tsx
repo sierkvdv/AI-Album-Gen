@@ -580,7 +580,7 @@ export default function EditorPage({ params }: { params: { generationId: string 
             gradient.addColorStop(1, 'rgba(0,0,0,0)');
             ctx.fillStyle = gradient;
             ctx.fillRect(-textLayer.blurBehind.spread * 3, -textLayer.blurBehind.spread * 3, textLayer.blurBehind.spread * 6, textLayer.blurBehind.spread * 6);
-            ctx.restore();
+        ctx.restore();
           }
           // Split text into lines
           const lines = textLayer.text.split('\n');
@@ -1173,15 +1173,21 @@ export default function EditorPage({ params }: { params: { generationId: string 
                         // Use backdrop-filter on a dedicated overlay
                         backdropFilter: `blur(${tl.blurBehind.intensity}px)`,
                         WebkitBackdropFilter: `blur(${tl.blurBehind.intensity}px)`,
-                        // Shape the blur area with a luminance mask so it softly fades out
-                        WebkitMaskImage: `radial-gradient(ellipse ${tl.blurBehind.spread * 3}px ${tl.blurBehind.spread * 3}px at center, rgba(0,0,0,1) 0%, rgba(0,0,0,1) ${Math.max(0, 100 - tl.blurBehind.fade)}%, rgba(0,0,0,0) 100%)`,
-                        maskImage: `radial-gradient(ellipse ${tl.blurBehind.spread * 3}px ${tl.blurBehind.spread * 3}px at center, rgba(0,0,0,1) 0%, rgba(0,0,0,1) ${Math.max(0, 100 - tl.blurBehind.fade)}%, rgba(0,0,0,0) 100%)`,
-                        WebkitMaskRepeat: 'no-repeat',
-                        maskRepeat: 'no-repeat',
-                        WebkitMaskPosition: '50% 50%',
-                        maskPosition: '50% 50%',
-                        WebkitMaskSize: '100% 100%',
-                        maskSize: '100% 100%',
+                        // Rectangular soft mask built from two gradients (X and Y) multiplied together
+                        // fadePx controls the feather at the edges
+                        ...(function() {
+                          const fadePx = Math.max(4, Math.round((tl.blurBehind!.fade / 100) * (tl.blurBehind!.spread * 2)));
+                          const horiz = `linear-gradient(to right, transparent 0, rgba(0,0,0,1) ${fadePx}px, rgba(0,0,0,1) calc(100% - ${fadePx}px), transparent 100%)`;
+                          const vert = `linear-gradient(to bottom, transparent 0, rgba(0,0,0,1) ${fadePx}px, rgba(0,0,0,1) calc(100% - ${fadePx}px), transparent 100%)`;
+                          return {
+                            WebkitMaskImage: `${horiz}, ${vert}`,
+                            maskImage: `${horiz}, ${vert}`,
+                            // Compose masks as intersection (multiply)
+                            WebkitMaskComposite: 'source-in',
+                            // Firefox
+                            maskComposite: 'intersect',
+                          } as React.CSSProperties;
+                        })(),
                         borderRadius: `${tl.blurBehind.spread}px`,
                         zIndex: 0,
                       }}
@@ -1196,7 +1202,7 @@ export default function EditorPage({ params }: { params: { generationId: string 
                       fontStyle: tl.italic ? 'italic' : 'normal',
                       color: tl.autoContrast ? pickAutoContrastColor(image, tl, project) : tl.color,
                       textTransform: tl.uppercase ? 'uppercase' : 'none',
-                      textAlign: 'center',
+                    textAlign: 'center',
                       letterSpacing: `${tl.letterSpacing}px`,
                       lineHeight: tl.lineHeight,
                       // Text shadow for drop shadow only
