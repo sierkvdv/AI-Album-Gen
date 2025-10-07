@@ -43,10 +43,6 @@ export interface LayerBase {
   locked: boolean;
   /** Z-index for layer stacking order. Higher values appear on top. */
   zIndex: number;
-  /** Optional mask stored as a data URL. When present, the layer’s content
-   * is clipped against this mask. White (opaque) regions of the mask show
-   * the content; black (transparent) regions hide it. */
-  mask?: string;
 }
 
 /**
@@ -347,12 +343,6 @@ export default function EditorPage({ params }: { params: { generationId: string 
   // Drag info for moving layers
   const containerRef = useRef<HTMLDivElement>(null);
   const dragInfo = useRef<{ layerId: string; offsetX: number; offsetY: number } | null>(null);
-  // Mask editing state
-  const [maskEditingLayerId, setMaskEditingLayerId] = useState<string | null>(null);
-  const maskCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const maskCtxRef = useRef<CanvasRenderingContext2D | null>(null);
-  const [maskMode, setMaskMode] = useState<'erase' | 'restore'>('erase');
-  const [maskBrushSize, setMaskBrushSize] = useState<number>(40);
 
   // Load generation and project on mount. Unchanged from original except
   // conversion of legacy layers and filter defaults.
@@ -564,23 +554,6 @@ export default function EditorPage({ params }: { params: { generationId: string 
         ctx.scale(layer.scale * scaleX, layer.scale * scaleY);
         ctx.globalAlpha = layer.opacity;
 
-        // Apply mask if present
-        if (layer.mask) {
-          const maskImg = new Image();
-          maskImg.src = layer.mask;
-          await maskImg.decode();
-          ctx.save();
-          const maskCanvas = document.createElement('canvas');
-          maskCanvas.width = maskImg.width;
-          maskCanvas.height = maskImg.height;
-          const mCtx = maskCanvas.getContext('2d')!;
-          mCtx.drawImage(maskImg, 0, 0);
-          const maskPattern = ctx.createPattern(maskCanvas, 'no-repeat')!;
-          ctx.globalCompositeOperation = 'destination-in';
-          ctx.fillStyle = maskPattern;
-          ctx.fillRect(-currentProject.baseWidth / 2, -currentProject.baseHeight / 2, currentProject.baseWidth, currentProject.baseHeight);
-          ctx.globalCompositeOperation = 'source-over';
-        }
 
         if (layer.type === 'image') {
           const imgLayer = layer as ImageLayer;
@@ -699,202 +672,6 @@ export default function EditorPage({ params }: { params: { generationId: string 
     });
   }
 
-  // Mask editing: start, erase/restore, finish
-  function startMaskEditing(layerId: string) {
-    setMaskEditingLayerId(layerId);
-    setTimeout(() => {
-      const canvas = maskCanvasRef.current;
-      if (!canvas || !project) return;
-      
-      // Set canvas dimensions to match container
-    const containerRect = containerRef.current?.getBoundingClientRect();
-    if (!containerRect) return;
-      
-      canvas.width = containerRect.width;
-      canvas.height = containerRect.height;
-      
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-      
-      // Start with white canvas (fully visible)
-      ctx.fillStyle = 'white';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
-      // Always set the context reference
-      maskCtxRef.current = ctx;
-      
-      const layer = project.layers.find((l) => l.id === layerId) as Layer | undefined;
-      if (layer?.mask) {
-        const img = new Image();
-        img.src = layer.mask;
-        img.onload = () => {
-          // Draw existing mask scaled to canvas size
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        };
-      } else {
-        // Start with white background (fully visible)
-        ctx.fillStyle = 'white';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-      }
-    }, 0);
-  }
-  function finishMaskEditing() {
-    if (!maskEditingLayerId) return;
-    const canvas = maskCanvasRef.current;
-    if (!canvas) return;
-    
-    // Canvas already has correct dimensions, just save the mask
-    const dataUrl = canvas.toDataURL('image/png');
-    
-    console.log('Saving mask for layer:', maskEditingLayerId);
-    console.log('Mask data URL length:', dataUrl.length);
-    
-    updateLayer(maskEditingLayerId, { mask: dataUrl });
-    setMaskEditingLayerId(null);
-  }
-
-  // Test function to create a simple mask
-
-  // Alternative mask approach using canvas-based rendering
-  function createMaskedTextElement(textLayer: TextLayer, project: ProjectState) {
-    if (!textLayer.mask) return null;
-    
-    const canvas = document.createElement('canvas');
-    canvas.width = project.baseWidth;
-    canvas.height = project.baseHeight;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return null;
-    
-    // Load the mask image
-    const maskImg = new Image();
-    maskImg.src = textLayer.mask;
-    
-    return new Promise<HTMLCanvasElement>((resolve) => {
-      maskImg.onload = () => {
-        // Draw the mask
-        ctx.drawImage(maskImg, 0, 0);
-        
-        // Get mask data
-        const maskData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        
-        // Create text canvas
-        const textCanvas = document.createElement('canvas');
-        textCanvas.width = project.baseWidth;
-        textCanvas.height = project.baseHeight;
-        const textCtx = textCanvas.getContext('2d');
-        if (!textCtx) return;
-        
-        // Draw text
-        textCtx.font = `${textLayer.fontSize}px ${textLayer.fontFamily}`;
-        textCtx.fillStyle = textLayer.color;
-        textCtx.textAlign = 'center';
-        textCtx.textBaseline = 'middle';
-        textCtx.fillText(textLayer.text, project.baseWidth / 2, project.baseHeight / 2);
-        
-        // Get text data
-        const textData = textCtx.getImageData(0, 0, textCanvas.width, textCanvas.height);
-        
-        // Apply mask to text
-        for (let i = 0; i < textData.data.length; i += 4) {
-          const maskAlpha = maskData.data[i + 3]; // Use mask alpha
-          textData.data[i + 3] = (textData.data[i + 3] * maskAlpha) / 255; // Apply mask to text alpha
-        }
-        
-        textCtx.putImageData(textData, 0, 0);
-        resolve(textCanvas);
-      };
-    });
-  }
-  function handleMaskDraw(e: React.PointerEvent) {
-    if (!maskEditingLayerId) return;
-    const canvas = maskCanvasRef.current;
-    const ctx = maskCtxRef.current;
-    const containerRect = containerRef.current?.getBoundingClientRect();
-    if (!canvas || !ctx || !containerRect || !project) return;
-    
-    // Only draw on pointer down or when dragging
-    if (e.type === 'pointermove' && e.buttons === 0) return;
-    
-    // Use direct canvas coordinates since canvas matches container
-    const x = e.clientX - containerRect.left;
-    const y = e.clientY - containerRect.top;
-    
-    // Draw black or white on the mask canvas
-    ctx.fillStyle = maskMode === 'erase' ? 'black' : 'white';
-    ctx.globalCompositeOperation = 'source-over';
-    
-    const radius = maskBrushSize / 2;
-    ctx.beginPath();
-    ctx.arc(x, y, radius, 0, Math.PI * 2);
-    ctx.fill();
-    
-    // Save mask in real-time - scale to project dimensions
-    const scaledCanvas = document.createElement('canvas');
-    scaledCanvas.width = project.baseWidth;
-    scaledCanvas.height = project.baseHeight;
-    const scaledCtx = scaledCanvas.getContext('2d');
-    if (scaledCtx) {
-      // Draw the mask canvas scaled to project dimensions
-      scaledCtx.drawImage(canvas, 0, 0, project.baseWidth, project.baseHeight);
-      const dataUrl = scaledCanvas.toDataURL('image/png');
-      console.log('Mask updated:', {
-        layerId: maskEditingLayerId,
-        mode: maskMode,
-        position: { x, y },
-        brushSize: maskBrushSize,
-        dataUrlLength: dataUrl.length,
-        dataUrlPreview: dataUrl.substring(0, 100) + '...'
-      });
-      updateLayer(maskEditingLayerId, { mask: dataUrl });
-    }
-  }
-  function resetMask() {
-    const ctx = maskCtxRef.current;
-    const canvas = maskCanvasRef.current;
-    if (!ctx || !canvas || !maskEditingLayerId) return;
-    
-    // Clear canvas (transparent = fully visible)
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    // Update mask in real-time after reset - scale to project dimensions
-    if (project) {
-      const scaledCanvas = document.createElement('canvas');
-      scaledCanvas.width = project.baseWidth;
-      scaledCanvas.height = project.baseHeight;
-      const scaledCtx = scaledCanvas.getContext('2d');
-      if (scaledCtx) {
-        scaledCtx.drawImage(canvas, 0, 0, project.baseWidth, project.baseHeight);
-        updateLayer(maskEditingLayerId, { mask: scaledCanvas.toDataURL('image/png') });
-      }
-    }
-  }
-  function invertMask() {
-    const ctx = maskCtxRef.current;
-    const canvas = maskCanvasRef.current;
-    if (!ctx || !canvas || !maskEditingLayerId) return;
-    
-    const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    for (let i = 0; i < data.data.length; i += 4) {
-      // Invert only RGB channels, keep alpha unchanged
-      data.data[i] = 255 - data.data[i];     // Red
-      data.data[i + 1] = 255 - data.data[i + 1]; // Green
-      data.data[i + 2] = 255 - data.data[i + 2]; // Blue
-      // data.data[i + 3] remains unchanged (alpha)
-    }
-    ctx.putImageData(data, 0, 0);
-    
-    // Update mask in real-time after inversion - scale to project dimensions
-    if (project) {
-      const scaledCanvas = document.createElement('canvas');
-      scaledCanvas.width = project.baseWidth;
-      scaledCanvas.height = project.baseHeight;
-      const scaledCtx = scaledCanvas.getContext('2d');
-      if (scaledCtx) {
-        scaledCtx.drawImage(canvas, 0, 0, project.baseWidth, project.baseHeight);
-        updateLayer(maskEditingLayerId, { mask: scaledCanvas.toDataURL('image/png') });
-      }
-    }
-  }
 
 
   // UI rendering helpers for layer controls, filters, mask controls, etc.
@@ -1315,7 +1092,6 @@ export default function EditorPage({ params }: { params: { generationId: string 
             ref={containerRef}
             className="relative border overflow-hidden"
             style={{ aspectRatio: `${project.baseWidth} / ${project.baseHeight}` }}
-            onPointerMove={handleMaskDraw}
             onPointerUp={() => {
               dragInfo.current = null;
             }}
@@ -1392,18 +1168,12 @@ export default function EditorPage({ params }: { params: { generationId: string 
                       ...(tl.blurBehind?.enabled && {
                         backdropFilter: `blur(${tl.blurBehind.intensity}px)`,
                         WebkitBackdropFilter: `blur(${tl.blurBehind.intensity}px)`,
-                        // Create a gradient background for smooth fade
-                        background: `radial-gradient(ellipse ${tl.blurBehind.spread}px ${tl.blurBehind.spread}px at center, rgba(0,0,0,${(100 - tl.blurBehind.fade) / 100 * 0.3}) 0%, rgba(0,0,0,${(100 - tl.blurBehind.fade) / 100 * 0.1}) 70%, transparent 100%)`,
+                        // Create a gradient background for smooth fade.
+                        // The fade slider controls how wide the soft edge is: higher fade -> wider transition.
+                        background: `radial-gradient(ellipse ${tl.blurBehind.spread}px ${tl.blurBehind.spread}px at center, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.25) ${100 - tl.blurBehind.fade}%, transparent 100%)`,
                         padding: `${tl.blurBehind.spread}px`,
                         margin: `-${tl.blurBehind.spread}px`,
                         borderRadius: `${tl.blurBehind.spread}px`,
-                      }),
-                      // Apply mask to text layer - test with simple approach
-                      ...(tl.mask && {
-                        WebkitMask: `url(${tl.mask})`,
-                        mask: `url(${tl.mask})`,
-                        // Add a red background to see if mask is applied
-                        backgroundColor: 'rgba(255,0,0,0.5)',
                       }),
                     }}
                   >
@@ -1421,11 +1191,6 @@ export default function EditorPage({ params }: { params: { generationId: string 
                       ...style,
                       // Apply filters to image layer
                       filter: computeCssFilters(project.filters),
-                      // Apply mask to image layer - test with simple approach
-                      ...(il.mask && {
-                        WebkitMask: `url(${il.mask})`,
-                        mask: `url(${il.mask})`,
-                      }),
                     }}
                     onPointerDown={(e) => {
                       if (il.locked) return;
@@ -1450,43 +1215,6 @@ export default function EditorPage({ params }: { params: { generationId: string 
                 );
               }
             })}
-            {/* Mask editing overlay */}
-            {maskEditingLayerId && (() => {
-              const layer = project.layers.find(l => l.id === maskEditingLayerId);
-              if (!layer) return null;
-              
-              return (
-                <div className="absolute inset-0 z-10">
-                  {/* Show current mask as overlay */}
-                  <div 
-                    className="absolute inset-0 bg-red-500 bg-opacity-20"
-                    style={{
-                      background: 'linear-gradient(45deg, rgba(255,0,0,0.1) 25%, transparent 25%), linear-gradient(-45deg, rgba(255,0,0,0.1) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, rgba(255,0,0,0.1) 75%), linear-gradient(-45deg, transparent 75%, rgba(255,0,0,0.1) 75%)',
-                      backgroundSize: '20px 20px',
-                      backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px'
-                    }}
-                  />
-                  {/* Drawing canvas - full container size */}
-                  <canvas
-                    ref={maskCanvasRef}
-                    className="absolute inset-0 touch-none cursor-crosshair"
-                    style={{ 
-                      background: 'transparent',
-                      pointerEvents: 'auto'
-                    }}
-                    onPointerDown={handleMaskDraw}
-                    onPointerMove={handleMaskDraw}
-                  />
-                  {/* Instructions */}
-                  <div className="absolute top-4 left-4 bg-black bg-opacity-75 text-white p-2 rounded text-sm">
-                    <div>Mask Mode: {maskMode === 'erase' ? 'Verbergen (zwart)' : 'Tonen (wit)'}</div>
-                    <div>Brush Size: {maskBrushSize}px</div>
-                    <div>Layer: {layer.name}</div>
-                    <div>Zwart = verborgen, Wit = zichtbaar</div>
-                  </div>
-                </div>
-              );
-            })()}
           </div>
           {/* Action buttons */}
           <div className="mt-4 flex space-x-2">
@@ -1495,34 +1223,6 @@ export default function EditorPage({ params }: { params: { generationId: string 
             </button>
             <button onClick={handleAddImage} className="px-3 py-1 bg-blue-600 text-white rounded">
               Add Image
-            </button>
-            <button onClick={() => {
-              if (!project || !selectedLayerId) return;
-              const layer = project.layers.find(l => l.id === selectedLayerId);
-              if (!layer) return;
-              
-              // Create a simple test mask
-              const canvas = document.createElement('canvas');
-              canvas.width = 200;
-              canvas.height = 200;
-              const ctx = canvas.getContext('2d');
-              if (!ctx) return;
-              
-              // Fill with white
-              ctx.fillStyle = 'white';
-              ctx.fillRect(0, 0, 200, 200);
-              
-              // Draw black circle in center
-              ctx.fillStyle = 'black';
-              ctx.beginPath();
-              ctx.arc(100, 100, 50, 0, Math.PI * 2);
-              ctx.fill();
-              
-              const dataUrl = canvas.toDataURL('image/png');
-              updateLayer(selectedLayerId, { mask: dataUrl });
-              console.log('Simple test mask created:', dataUrl.substring(0, 100) + '...');
-            }} className="px-3 py-1 bg-orange-600 text-white rounded">
-              Test Mask
             </button>
             <button onClick={handleSave} className="px-3 py-1 bg-green-600 text-white rounded">
               Save
@@ -1535,45 +1235,6 @@ export default function EditorPage({ params }: { params: { generationId: string 
           {renderLayerControls()}
           {/* Filter controls */}
           {renderFilterControls()}
-          {/* Mask controls if editing */}
-          {maskEditingLayerId && (
-            <div className="p-4 border rounded bg-gray-50 mt-4 space-y-2">
-              <h3 className="font-semibold">Masking</h3>
-              <p className="text-sm text-gray-600">
-                Zwart = verborgen, Wit = zichtbaar. Sleep om te maskeren.
-              </p>
-              <p className="text-xs text-gray-500">
-                Masking layer: {maskEditingLayerId}
-              </p>
-              <div className="flex items-center space-x-2">
-                <label>Mode</label>
-                <select value={maskMode} onChange={(e) => setMaskMode(e.target.value as any)}>
-                  <option value="erase">Verbergen (zwart)</option>
-                  <option value="restore">Tonen (wit)</option>
-                </select>
-                <label>Brush size</label>
-                <input
-                  type="range"
-                  min={5}
-                  max={200}
-                  value={maskBrushSize}
-                  onChange={(e) => setMaskBrushSize(parseInt(e.target.value))}
-                />
-                <span className="text-sm">{maskBrushSize}px</span>
-              </div>
-              <div className="flex space-x-2">
-                <button onClick={resetMask} className="px-2 py-1 bg-gray-200 rounded">
-                  Reset
-                </button>
-                <button onClick={invertMask} className="px-2 py-1 bg-gray-200 rounded">
-                  Invert
-                </button>
-                <button onClick={() => finishMaskEditing()} className="px-2 py-1 bg-blue-600 text-white rounded">
-                  Done
-                </button>
-              </div>
-            </div>
-          )}
         </div>
         <div className="md:col-span-1">
           {/* Layer panel */}
@@ -1608,9 +1269,6 @@ export default function EditorPage({ params }: { params: { generationId: string 
                       {layer.name}
                     </span>
                   )}
-                  <button onClick={() => startMaskEditing(layer.id)} className="ml-2 text-xs px-1 bg-gray-200 rounded">
-                    Mask
-                  </button>
                 </div>
                 <div className="flex items-center">
                   <button onClick={() => moveLayer(layer.id, 1)} className="px-1 text-xs">
@@ -1631,7 +1289,7 @@ export default function EditorPage({ params }: { params: { generationId: string 
           </div>
           {/* Helper text */}
           <p className="mt-4 text-sm text-gray-600">
-            Gebruik het lagenpaneel om lagen te selecteren, hernoemen, verbergen, vergrendelen of te maskeren. Sleep
+            Gebruik het lagenpaneel om lagen te selecteren, hernoemen, verbergen of vergrendelen. Sleep
             lagen omhoog of omlaag om de stapelvolgorde te wijzigen.
           </p>
         </div>
