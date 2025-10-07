@@ -1613,10 +1613,10 @@ export default function EditorPage({ params }: { params: { generationId: string 
                   </button>
                 </div>
                 <div className="flex items-center">
-                  <button onClick={() => moveLayer(layer.id, -1)} className="px-1 text-xs">
+                  <button onClick={() => moveLayer(layer.id, 1)} className="px-1 text-xs">
                     ▲
                   </button>
-                  <button onClick={() => moveLayer(layer.id, 1)} className="px-1 text-xs">
+                  <button onClick={() => moveLayer(layer.id, -1)} className="px-1 text-xs">
                     ▼
                   </button>
                   <button
