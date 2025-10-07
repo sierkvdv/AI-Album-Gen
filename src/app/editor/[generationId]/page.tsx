@@ -1154,13 +1154,49 @@ export default function EditorPage({ params }: { params: { generationId: string 
                   style={{
                       // bestaande stijl:
                       ...style,
+                      // reserve space around the text so the blur can fade out softly
+                      ...(tl.blurBehind?.enabled
+                        ? {
+                            padding: `${tl.blurBehind.spread * 2}px`,
+                            margin: `-${tl.blurBehind.spread * 2}px`,
+                            borderRadius: `${tl.blurBehind.spread}px`,
+                          }
+                        : {}),
+                      position: 'absolute',
+                    }}
+                >
+                  {tl.blurBehind?.enabled && (
+                    <div
+                      aria-hidden
+                      className="absolute inset-0 pointer-events-none"
+                      style={{
+                        // Use backdrop-filter on a dedicated overlay
+                        backdropFilter: `blur(${tl.blurBehind.intensity}px)`,
+                        WebkitBackdropFilter: `blur(${tl.blurBehind.intensity}px)`,
+                        // Shape the blur area with a luminance mask so it softly fades out
+                        WebkitMaskImage: `radial-gradient(ellipse ${tl.blurBehind.spread * 3}px ${tl.blurBehind.spread * 3}px at center, rgba(0,0,0,1) 0%, rgba(0,0,0,1) ${Math.max(0, 100 - tl.blurBehind.fade)}%, rgba(0,0,0,0) 100%)`,
+                        maskImage: `radial-gradient(ellipse ${tl.blurBehind.spread * 3}px ${tl.blurBehind.spread * 3}px at center, rgba(0,0,0,1) 0%, rgba(0,0,0,1) ${Math.max(0, 100 - tl.blurBehind.fade)}%, rgba(0,0,0,0) 100%)`,
+                        WebkitMaskRepeat: 'no-repeat',
+                        maskRepeat: 'no-repeat',
+                        WebkitMaskPosition: '50% 50%',
+                        maskPosition: '50% 50%',
+                        WebkitMaskSize: '100% 100%',
+                        maskSize: '100% 100%',
+                        borderRadius: `${tl.blurBehind.spread}px`,
+                        zIndex: 0,
+                      }}
+                    />
+                  )}
+                  <span
+                    className="relative"
+                    style={{
                       fontFamily: tl.fontFamily,
                       fontSize: `${tl.fontSize}px`,
                       fontWeight: tl.fontWeight,
                       fontStyle: tl.italic ? 'italic' : 'normal',
                       color: tl.autoContrast ? pickAutoContrastColor(image, tl, project) : tl.color,
                       textTransform: tl.uppercase ? 'uppercase' : 'none',
-                    textAlign: 'center',
+                      textAlign: 'center',
                       letterSpacing: `${tl.letterSpacing}px`,
                       lineHeight: tl.lineHeight,
                       // Text shadow for drop shadow only
@@ -1170,20 +1206,12 @@ export default function EditorPage({ params }: { params: { generationId: string 
                       // Outline using WebkitTextStroke (inward)
                       WebkitTextStrokeWidth: tl.outline ? `${tl.outline.width}px` : undefined,
                       WebkitTextStrokeColor: tl.outline ? tl.outline.color : undefined,
-                      // Blur behind effect with proper fade
-                      ...(tl.blurBehind?.enabled && {
-                        backdropFilter: `blur(${tl.blurBehind.intensity}px)`,
-                        WebkitBackdropFilter: `blur(${tl.blurBehind.intensity}px)`,
-                        // Create a much larger gradient background for smooth fade
-                        // Use a much larger spread for the blur effect
-                        background: `radial-gradient(ellipse ${tl.blurBehind.spread * 3}px ${tl.blurBehind.spread * 3}px at center, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.05) 80%, transparent 100%)`,
-                        padding: `${tl.blurBehind.spread * 2}px`,
-                        margin: `-${tl.blurBehind.spread * 2}px`,
-                        borderRadius: `${tl.blurBehind.spread}px`,
-                      }),
+                      zIndex: 1,
+                      position: 'relative',
                     }}
                   >
                     {tl.text}
+                  </span>
                 </div>
               );
               } else {
