@@ -674,10 +674,6 @@ export default function EditorPage({ params }: { params: { generationId: string 
     setProject((prev) => {
       if (!prev) return prev;
       
-      // Find the layer to move
-      const layerToMove = prev.layers.find((l) => l.id === id);
-      if (!layerToMove) return prev;
-      
       // Get all layers sorted by zIndex
       const sortedLayers = [...prev.layers].sort((a, b) => a.zIndex - b.zIndex);
       const currentIndex = sortedLayers.findIndex(l => l.id === id);
@@ -688,17 +684,15 @@ export default function EditorPage({ params }: { params: { generationId: string 
       // If moving to the same position, don't change anything
       if (newIndex === currentIndex) return prev;
       
-      // Get the layer at the new position
-      const targetLayer = sortedLayers[newIndex];
+      // Create a new array with the layer moved to the new position
+      const newSortedLayers = [...sortedLayers];
+      const [movedLayer] = newSortedLayers.splice(currentIndex, 1);
+      newSortedLayers.splice(newIndex, 0, movedLayer);
       
-      // Swap zIndex values
+      // Assign new zIndex values based on new positions
       const newLayers = prev.layers.map(layer => {
-        if (layer.id === id) {
-          return { ...layer, zIndex: targetLayer.zIndex };
-        } else if (layer.id === targetLayer.id) {
-          return { ...layer, zIndex: layerToMove.zIndex };
-        }
-        return layer;
+        const newPosition = newSortedLayers.findIndex(l => l.id === layer.id);
+        return { ...layer, zIndex: newPosition + 1 };
       });
       
       return { ...prev, layers: newLayers };
