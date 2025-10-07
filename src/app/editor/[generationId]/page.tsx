@@ -572,9 +572,15 @@ export default function EditorPage({ params }: { params: { generationId: string 
           if (textLayer.blurBehind?.enabled) {
             ctx.save();
             ctx.filter = `blur(${textLayer.blurBehind.intensity}px)`;
-            ctx.fillStyle = 'rgba(0,0,0,0.3)';
-            ctx.fillRect(-size, -size, size * 2, size * 2);
-        ctx.restore();
+            // Create a gradient backdrop for smooth fade
+            const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, textLayer.blurBehind.spread * 3);
+            gradient.addColorStop(0, 'rgba(0,0,0,0.2)');
+            gradient.addColorStop(0.5, 'rgba(0,0,0,0.1)');
+            gradient.addColorStop(0.8, 'rgba(0,0,0,0.05)');
+            gradient.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(-textLayer.blurBehind.spread * 3, -textLayer.blurBehind.spread * 3, textLayer.blurBehind.spread * 6, textLayer.blurBehind.spread * 6);
+            ctx.restore();
           }
           // Split text into lines
           const lines = textLayer.text.split('\n');
@@ -860,9 +866,9 @@ export default function EditorPage({ params }: { params: { generationId: string 
                   updateLayer(tl.id, {
                     blurBehind: {
                       enabled: true,
-                      intensity: 8,
-                      spread: 20,
-                      fade: 30,
+                      intensity: 12,
+                      spread: 60,
+                      fade: 50,
                     },
                   });
                 } else {
@@ -1168,11 +1174,11 @@ export default function EditorPage({ params }: { params: { generationId: string 
                       ...(tl.blurBehind?.enabled && {
                         backdropFilter: `blur(${tl.blurBehind.intensity}px)`,
                         WebkitBackdropFilter: `blur(${tl.blurBehind.intensity}px)`,
-                        // Create a gradient background for smooth fade.
-                        // The fade slider controls how wide the soft edge is: higher fade -> wider transition.
-                        background: `radial-gradient(ellipse ${tl.blurBehind.spread}px ${tl.blurBehind.spread}px at center, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.25) ${100 - tl.blurBehind.fade}%, transparent 100%)`,
-                        padding: `${tl.blurBehind.spread}px`,
-                        margin: `-${tl.blurBehind.spread}px`,
+                        // Create a much larger gradient background for smooth fade
+                        // Use a much larger spread for the blur effect
+                        background: `radial-gradient(ellipse ${tl.blurBehind.spread * 3}px ${tl.blurBehind.spread * 3}px at center, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.05) 80%, transparent 100%)`,
+                        padding: `${tl.blurBehind.spread * 2}px`,
+                        margin: `-${tl.blurBehind.spread * 2}px`,
                         borderRadius: `${tl.blurBehind.spread}px`,
                       }),
                     }}
