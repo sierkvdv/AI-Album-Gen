@@ -39,6 +39,7 @@ export async function GET(
     if (!project) {
       project = await db.project.findFirst({
         where: { generationId: projectId, userId: dbUser.id },
+        orderBy: { updatedAt: 'desc' },
       });
     }
 
