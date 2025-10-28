@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from '@/lib/prisma';
-import { LedgerType } from '@prisma/client';
 
 export async function GET(req: NextRequest) {
   try {
@@ -23,22 +22,14 @@ export async function GET(req: NextRequest) {
     console.log('User API - Found user:', user ? { id: user.id, email: user.email, credits: user.credits } : 'null');
     
     if (!user) {
-      // Auto-create user with initial credits so dashboard can load
-      user = await db.$transaction(async (tx) => {
-        const created = await tx.user.create({
-          data: {
-            email: session.user!.email!,
-            name: session.user?.name ?? null,
-            image: session.user?.image ?? null,
-            credits: 5,
-          },
-        });
-        try {
-          await tx.creditLedger.create({
-            data: { userId: created.id, type: LedgerType.GRANT, amount: 5, reference: 'auto_create' },
-          });
-        } catch {}
-        return created;
+      // Maak het user-record aan zonder gratis credits; app kan dan laden
+      user = await db.user.create({
+        data: {
+          email: session.user!.email!,
+          name: session.user?.name ?? null,
+          image: session.user?.image ?? null,
+          credits: 0,
+        },
       });
     }
     
