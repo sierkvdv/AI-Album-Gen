@@ -466,8 +466,21 @@ export default function EditorPage({ params }: { params: { generationId: string 
         baseImg.src = resolvedProj.baseAssetUrl;
         await baseImg.decode();
 
+        // Ensure the base image is represented as a layer so het verschijnt in het lagenpaneel
+        let normalizedProject: ProjectState = resolvedProj;
+        const hasImageLayer = normalizedProject.layers.some(l => l.type === 'image');
+        if (!hasImageLayer) {
+          const baseLayer = createImageLayer(normalizedProject, normalizedProject.baseAssetUrl);
+          // Plaats de basisafbeelding onderaan de stapel
+          baseLayer.zIndex = 1;
+          normalizedProject = {
+            ...normalizedProject,
+            layers: [baseLayer, ...normalizedProject.layers.map((l) => ({ ...l, zIndex: (l.zIndex || 1) + 1 }))],
+          };
+        }
+
         if (!cancelled) {
-          setProject(resolvedProj);
+          setProject(normalizedProject);
           setImage(baseImg);
         }
       } catch (err) {
