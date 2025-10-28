@@ -17,7 +17,12 @@ declare global {
  * fresh client in production.
  */
 export function createPrismaClient() {
-  const databaseUrl = process.env.DATABASE_URL;
+  const databaseUrl =
+    process.env.DATABASE_URL ||
+    process.env.POSTGRES_PRISMA_URL ||
+    process.env.POSTGRES_URL ||
+    process.env.DIRECT_URL ||
+    process.env.POSTGRES_URL_NON_POOLING;
   // Append pgbouncer parameters to ensure prepared statements are disabled in
   // serverless environments. Without this Supabase's pgbouncer will reject
   // the connection.
