@@ -60,37 +60,56 @@ export async function POST(request: NextRequest) {
       layers: [] // No additional layers
     };
 
-    // Use provided project data but ensure unique ID
-    const projectData = project ? {
+    // Decide project payload (client state if present, else defaults)
+    const incoming = project ? {
+      ...defaultProject,
       ...project,
-      id: project.id || `proj_${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${Math.random().toString(36).substr(2, 9)}`
     } : defaultProject;
-    console.log('Projects API: Using project data:', projectData);
+    console.log('Projects API: Using project data:', incoming);
 
-    // Create the project
-    const newProject = await db.project.create({
-      data: {
-        id: projectData.id,
-        userId: user.id, // Use database user ID instead of session user ID
-        generationId: generationId,
-        baseAssetUrl: projectData.baseAssetUrl,
-        baseWidth: projectData.baseWidth,
-        baseHeight: projectData.baseHeight,
-        crop: projectData.crop,
-        filters: projectData.filters,
-        layers: projectData.layers
-      }
+    // Single-active project per generation: upsert on (userId, generationId)
+    const existing = await db.project.findFirst({
+      where: { userId: user.id, generationId },
+      orderBy: { updatedAt: 'desc' },
     });
 
-    console.log('Projects API: Created project:', newProject.id);
+    let persisted;
+    if (existing) {
+      persisted = await db.project.update({
+        where: { id: existing.id },
+        data: {
+          baseAssetUrl: incoming.baseAssetUrl,
+          baseWidth: incoming.baseWidth,
+          baseHeight: incoming.baseHeight,
+          crop: incoming.crop,
+          filters: incoming.filters,
+          layers: incoming.layers,
+        }
+      });
 
-    return NextResponse.json({ 
-      success: true,
-      project: {
-        ...project,
-        id: newProject.id
-      }
-    });
+      // Clean up any other stray projects for the same generation
+      await db.project.deleteMany({
+        where: { generationId, userId: user.id, NOT: { id: existing.id } },
+      });
+    } else {
+      persisted = await db.project.create({
+        data: {
+          id: incoming.id,
+          userId: user.id,
+          generationId,
+          baseAssetUrl: incoming.baseAssetUrl,
+          baseWidth: incoming.baseWidth,
+          baseHeight: incoming.baseHeight,
+          crop: incoming.crop,
+          filters: incoming.filters,
+          layers: incoming.layers,
+        }
+      });
+    }
+
+    console.log('Projects API: Persisted project:', persisted.id);
+
+    return NextResponse.json({ success: true, project: { id: persisted.id } });
 
   } catch (error) {
     console.error('Projects API: Error:', error);
