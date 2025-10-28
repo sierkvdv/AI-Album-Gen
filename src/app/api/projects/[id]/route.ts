@@ -103,27 +103,49 @@ export async function PUT(
     }
 
     // Ensure the project belongs to the user
-    const existing = await db.project.findUnique({
+    let target = await db.project.findUnique({
       where: { id: params.id, userId: dbUser.id },
     });
-    if (!existing) {
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+    // Fallback: some clients send generationId here
+    if (!target) {
+      target = await db.project.findFirst({
+        where: { generationId: params.id, userId: dbUser.id },
+        orderBy: { updatedAt: 'desc' },
+      });
     }
 
-    const updated = await db.project.update({
-      where: { id: params.id },
+    if (target) {
+      const updated = await db.project.update({
+        where: { id: target.id },
+        data: {
+          baseAssetUrl: projectUpdate.baseAssetUrl ?? target.baseAssetUrl,
+          baseWidth: projectUpdate.baseWidth ?? target.baseWidth,
+          baseHeight: projectUpdate.baseHeight ?? target.baseHeight,
+          crop: projectUpdate.crop ?? target.crop,
+          filters: projectUpdate.filters ?? target.filters,
+          layers: projectUpdate.layers ?? target.layers,
+        },
+        select: { id: true },
+      });
+      return NextResponse.json({ success: true, id: updated.id });
+    }
+
+    // If nothing existed, create a new project keyed by generationId=params.id
+    const created = await db.project.create({
       data: {
-        baseAssetUrl: projectUpdate.baseAssetUrl ?? existing.baseAssetUrl,
-        baseWidth: projectUpdate.baseWidth ?? existing.baseWidth,
-        baseHeight: projectUpdate.baseHeight ?? existing.baseHeight,
-        crop: projectUpdate.crop ?? existing.crop,
-        filters: projectUpdate.filters ?? existing.filters,
-        layers: projectUpdate.layers ?? existing.layers,
+        id: `proj_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+        userId: dbUser.id,
+        generationId: params.id,
+        baseAssetUrl: projectUpdate.baseAssetUrl,
+        baseWidth: projectUpdate.baseWidth,
+        baseHeight: projectUpdate.baseHeight,
+        crop: projectUpdate.crop ?? {},
+        filters: projectUpdate.filters ?? {},
+        layers: projectUpdate.layers ?? [],
       },
       select: { id: true },
     });
-
-    return NextResponse.json({ success: true, id: updated.id });
+    return NextResponse.json({ success: true, id: created.id });
   } catch (error) {
     console.error('Projects API: Update error:', error);
     return NextResponse.json(
