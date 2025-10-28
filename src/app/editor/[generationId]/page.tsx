@@ -358,6 +358,7 @@ export default function EditorPage({ params }: { params: { generationId: string 
 
         // 2. Haal het bestaande project op, of creëer een nieuw project
         let proj: ProjectState | null = null;
+        // First try by generationId (API supports both now). If 404, try by project.id after creation
         const projRes = await fetch(`/api/projects/${generationId}`);
         if (projRes.ok) {
           const json = await projRes.json();
@@ -437,7 +438,14 @@ export default function EditorPage({ params }: { params: { generationId: string 
             throw new Error('Project creation returned success: false');
           }
           
-          proj = responseData.project;
+          // After create, fetch by project id to get canonical data
+          const fetchCreated = await fetch(`/api/projects/${responseData.project.id}`);
+          if (fetchCreated.ok) {
+            const createdJson = await fetchCreated.json();
+            proj = createdJson.project;
+          } else {
+            proj = responseData.project;
+          }
         }
 
         // 3. Vanaf hier weet je zeker dat proj niet null is
@@ -448,7 +456,13 @@ export default function EditorPage({ params }: { params: { generationId: string 
 
         // Laad de basisafbeelding van resolvedProj
         const baseImg = new Image();
-        baseImg.crossOrigin = 'anonymous';
+        // Load with anonymous CORS only for same‑origin assets; for external URLs avoid tainting when exporting
+        if (resolvedProj.baseAssetUrl.startsWith('http') && !resolvedProj.baseAssetUrl.includes(location.host)) {
+          baseImg.crossOrigin = 'anonymous';
+          baseImg.referrerPolicy = 'no-referrer';
+        } else {
+          baseImg.crossOrigin = 'anonymous';
+        }
         baseImg.src = resolvedProj.baseAssetUrl;
         await baseImg.decode();
 

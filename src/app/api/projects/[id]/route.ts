@@ -31,12 +31,16 @@ export async function GET(
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const project = await db.project.findUnique({
-      where: {
-        id: projectId,
-        userId: dbUser.id,
-      },
+    // Try by project id first
+    let project = await db.project.findUnique({
+      where: { id: projectId, userId: dbUser.id },
     });
+    // Fallback: some clients pass generationId here; support that too
+    if (!project) {
+      project = await db.project.findFirst({
+        where: { generationId: projectId, userId: dbUser.id },
+      });
+    }
 
     if (!project) {
       console.log('Projects API: Project not found:', projectId);
