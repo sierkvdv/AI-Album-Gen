@@ -22,11 +22,20 @@ export async function GET(
     console.log('Projects API: Getting project:', projectId);
 
     const db = prisma();
+    // Map session email -> database user id to avoid mixing external OAuth id
+    const dbUser = await db.user.findUnique({
+      where: { email: session.user.email! },
+      select: { id: true },
+    });
+    if (!dbUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
     const project = await db.project.findUnique({
-      where: { 
+      where: {
         id: projectId,
-        userId: session.user.id // Ensure user can only access their own projects
-      }
+        userId: dbUser.id,
+      },
     });
 
     if (!project) {
@@ -55,5 +64,66 @@ export async function GET(
       error: "Internal server error",
       message: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
+  }
+}
+
+/**
+ * PUT /api/projects/[id]
+ *
+ * Update an existing project. Only owner can update.
+ */
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const projectUpdate = body?.project;
+    if (!projectUpdate) {
+      return NextResponse.json({ error: 'Missing project payload' }, { status: 400 });
+    }
+
+    const db = prisma();
+    const dbUser = await db.user.findUnique({
+      where: { email: session.user.email },
+      select: { id: true },
+    });
+    if (!dbUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // Ensure the project belongs to the user
+    const existing = await db.project.findUnique({
+      where: { id: params.id, userId: dbUser.id },
+    });
+    if (!existing) {
+      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+    }
+
+    const updated = await db.project.update({
+      where: { id: params.id },
+      data: {
+        baseAssetUrl: projectUpdate.baseAssetUrl ?? existing.baseAssetUrl,
+        baseWidth: projectUpdate.baseWidth ?? existing.baseWidth,
+        baseHeight: projectUpdate.baseHeight ?? existing.baseHeight,
+        crop: projectUpdate.crop ?? existing.crop,
+        filters: projectUpdate.filters ?? existing.filters,
+        layers: projectUpdate.layers ?? existing.layers,
+      },
+      select: { id: true },
+    });
+
+    return NextResponse.json({ success: true, id: updated.id });
+  } catch (error) {
+    console.error('Projects API: Update error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error', message: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 },
+    );
   }
 }
