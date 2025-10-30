@@ -1,14 +1,18 @@
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 
-// Force the correct production URL. When deploying to Vercel the env
-// variables NEXTAUTH_URL and VERCEL_URL may be set automatically but are
-// immutable. Reassign them here to ensure Auth.js uses the canonical host.
+// Configure the production URL for Auth.js using CANONICAL_HOST if provided.
+// This avoids hardcoding a specific domain and works across Vercel previews
+// and custom domains.
 if (process.env.NODE_ENV === "production") {
-  delete process.env.NEXTAUTH_URL;
-  delete process.env.VERCEL_URL;
-  process.env.NEXTAUTH_URL = "https://ai-album-gen.vercel.app";
-  process.env.VERCEL_URL = "ai-album-gen.vercel.app";
+  const canonical = process.env.CANONICAL_HOST;
+  if (canonical) {
+    const host = canonical.replace(/^https?:\/\//, "");
+    delete process.env.NEXTAUTH_URL;
+    delete process.env.VERCEL_URL;
+    process.env.NEXTAUTH_URL = `https://${host}`;
+    process.env.VERCEL_URL = host;
+  }
 }
 
 // Exported Auth.js configuration. In development credentials may be

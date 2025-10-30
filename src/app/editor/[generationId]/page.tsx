@@ -340,9 +340,43 @@ export default function EditorPage({ params }: { params: { generationId: string 
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
   const [customFonts, setCustomFonts] = useState<{ name: string; family: string; category: string }[]>([]);
   const [editingNameId, setEditingNameId] = useState<string | null>(null);
+  const [offlineNotice, setOfflineNotice] = useState<string | null>(null);
   // Drag info for moving layers
   const containerRef = useRef<HTMLDivElement>(null);
   const dragInfo = useRef<{ layerId: string; offsetX: number; offsetY: number } | null>(null);
+
+  // Persist a local draft on every change (safety net per device)
+  useEffect(() => {
+    if (!project) return;
+    try {
+      const key = `project:${project.id || generationId}`;
+      localStorage.setItem(key, JSON.stringify(project));
+    } catch {}
+  }, [project, generationId]);
+
+  // When server save previously failed, retry in the background periodically
+  useEffect(() => {
+    if (!project || !offlineNotice) return;
+    const key = `project:${project.id || generationId}`;
+    let cancelled = false;
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/projects/${project.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ project }),
+        });
+        if (res.ok && !cancelled) {
+          setOfflineNotice(null);
+          try { localStorage.removeItem(key); } catch {}
+        }
+      } catch {}
+    }, 5000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [offlineNotice, project, generationId]);
 
   // Load generation and project on mount. Unchanged from original except
   // conversion of legacy layers and filter defaults.
@@ -479,9 +513,36 @@ export default function EditorPage({ params }: { params: { generationId: string 
           };
         }
 
-        if (!cancelled) {
-          setProject(normalizedProject);
-          setImage(baseImg);
+        // Try to load a locally saved draft (offline autosave)
+        try {
+          const localKeys = [
+            `project:${resolvedProj.id}`,
+            `project:${generationId}`,
+          ];
+          let restored: ProjectState | null = null;
+          for (const key of localKeys) {
+            const raw = typeof window !== 'undefined' ? localStorage.getItem(key) : null;
+            if (raw) {
+              try {
+                const parsed = JSON.parse(raw) as ProjectState;
+                // Basic shape check
+                if (parsed && parsed.layers && Array.isArray(parsed.layers)) {
+                  restored = { ...normalizedProject, ...parsed, id: resolvedProj.id };
+                  break;
+                }
+              } catch {}
+            }
+          }
+          const finalProject = restored ?? normalizedProject;
+          if (!cancelled) {
+            setProject(finalProject);
+            setImage(baseImg);
+          }
+        } catch {
+          if (!cancelled) {
+            setProject(normalizedProject);
+            setImage(baseImg);
+          }
         }
       } catch (err) {
         console.error('Editor loading error:', err);
@@ -548,9 +609,16 @@ export default function EditorPage({ params }: { params: { generationId: string 
       body: JSON.stringify({ project }),
     });
     if (res.ok) {
+      setOfflineNotice(null);
       alert('Project saved');
     } else {
-      alert('Failed to save project');
+      // Always keep a local copy as a safety net
+      try {
+        const key = `project:${project.id || generationId}`;
+        localStorage.setItem(key, JSON.stringify(project));
+      } catch {}
+      setOfflineNotice('Opslaan op server mislukt. We hebben je wijzigingen lokaal bewaard.');
+      alert('Opslaan op server mislukt. Je wijzigingen zijn lokaal bewaard.');
     }
   }
 
@@ -1108,6 +1176,11 @@ export default function EditorPage({ params }: { params: { generationId: string 
   // Render component
   return (
     <div className="max-w-screen-lg mx-auto p-4">
+      {offlineNotice && (
+        <div className="mb-3 p-3 rounded bg-yellow-100 text-yellow-900 text-sm">
+          {offlineNotice}
+        </div>
+      )}
       {/* Load all Google Fonts at once for preview; could be optimised */}
       <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto:wght@400;500;700&family=Open+Sans:wght@400;600;700&family=Lato:wght@400;700&family=Montserrat:wght@400;500;600;700&family=Source+Sans+Pro:wght@400;600;700&family=Poppins:wght@400;500;600;700&family=Nunito:wght@400;600;700&family=Playfair+Display:wght@400;700&family=Merriweather:wght@400;700&family=Lora:wght@400;700&family=Crimson+Text:wght@400;600&family=Libre+Baskerville:wght@400;700&family=Oswald:wght@400;500;600;700&family=Bebas+Neue&family=Anton&family=Righteous&family=Fredoka+One&family=Dancing+Script:wght@400;700&family=Pacifico&family=Caveat:wght@400;700&family=Kalam:wght@400;700&family=Comfortaa:wght@400;700&family=Fira+Code:wght@400;500&family=Source+Code+Pro:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
